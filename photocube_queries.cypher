@@ -31,12 +31,38 @@ MATCH (root: Node {id: 5})
 MATCH p = (root)<-[:HAS_PARENT]-()
 RETURN p;
 
-// TODO state
-MATCH p=(o: Object)-[:TAGGED]->(t: Tag)
+//find all images with dogs - 45 - id: 691
+MATCH (root:Node)-[:NODE_HAS_TAG]-(t:Tag {name:"Dog"})
+MATCH (root)<-[:HAS_PARENT*]-()-[:NODE_HAS_TAG]->(tag: Tag)<-[:TAGGED]-(o:Object)
+RETURN o;
+
+//find all images within entity hierarchy
+MATCH (root: Node {id:40})
+MATCH (root)<-[:HAS_PARENT*]-()-[:NODE_HAS_TAG]->()<-[:TAGGED]-(o:Object)
+RETURN o;
+
+//find all images from 2015
+ MATCH (tag :Tag:Numerical {name:2015})<-[:TAGGED]-(o)
+ return o;
+
+
+// Combined state - ids unknown - 295 ms
+MATCH (dogRoot: Node)-[:NODE_HAS_TAG]-(dogTag: Tag {name:"Dog"})
+MATCH (dogRoot)<-[:HAS_PARENT*]-()-[:NODE_HAS_TAG]->()<-[:TAGGED]-(o: Object)
+MATCH (ent : Node)-[:NODE_HAS_TAG]->(entTag: Tag {name: "Entity"})
 WHERE EXISTS {
-    MATCH (root:Node {id: 3})<-[:HAS_PARENT*]-()
-    WHERE EXISTS {
-        MATCH (otherRoot:Node)<-[:HAS_PARENT*]-()-[:NODE_HAS_TAG]->(tag: Tag {name: "Dog"})
-    }
-} AND t.name > date({year: 2015})
-RETURN p limit 50;
+    MATCH (ent)<-[:HAS_PARENT*]-()-[:NODE_HAS_TAG]->()<-[:TAGGED]-(o)
+} AND EXISTS {
+    MATCH (tag:Tag:Numerical {name:2015})<-[:TAGGED]-(o)
+}
+RETURN o;
+
+//Combined state - ids known - 400 ms
+MATCH (root: Node {id:691})-[:NODE_HAS_TAG]-(t: Tag)
+MATCH (root)<-[:HAS_PARENT*]-()-[:NODE_HAS_TAG]->()<-[:TAGGED]-(o: Object)
+WHERE EXISTS {
+    MATCH (ent: Node {id:40})<-[:HAS_PARENT*]-()-[:NODE_HAS_TAG]->()<-[:TAGGED]-(o)
+} AND EXISTS {
+    MATCH (tag :Tag:Numerical {id: 1350})<-[:TAGGED]-(o)
+}
+RETURN o;

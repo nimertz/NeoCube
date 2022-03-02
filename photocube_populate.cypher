@@ -31,7 +31,7 @@ MERGE (alpha:Tag:Alphanumerical {id:toInteger(at.id), name: at.name})
 RETURN count(alpha);
 //Numerical tags
 LOAD CSV WITH HEADERS FROM 'file:///numerical_tags.csv' AS nt
-MERGE (num:Tag:Numerical {id:toInteger(nt.id), name: toFloat(nt.name)})
+MERGE (num:Tag:Numerical {id:toInteger(nt.id), name: toInteger(nt.name)}) //change to  float when appropriate
 RETURN count(num);
 //date tags
 LOAD CSV WITH HEADERS FROM 'file:///date_tags.csv' AS dt
