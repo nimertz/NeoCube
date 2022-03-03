@@ -12,7 +12,7 @@
 //MERGE constraints and indexes 
 CREATE INDEX FOR (o:Object) ON (o.id);
 CREATE INDEX FOR (t:Tag) ON (t.id);
-CREATE INDEX FOR (ts:TagSet) ON (ts.id);
+CREATE INDEX FOR (ts:Tagset) ON (ts.id);
 CREATE INDEX FOR (h:Hierarchy) ON (h.id);
 CREATE INDEX FOR (n:Node) ON (n.id);
 
@@ -78,7 +78,7 @@ RETURN count(r);
 //Node --> Tag
 LOAD CSV WITH HEADERS FROM 'file:///nodes.csv' AS node
 MATCH (n:Node {id:toInteger(node.id)}), (t:Tag {id:toInteger(node.tag_id)})
-MERGE (n)-[r:NODE_HAS_TAG]->(t)
+MERGE (n)-[r:REPRESENTS]->(t)
 RETURN count(r);
 
 //Hierarchy --> root node
