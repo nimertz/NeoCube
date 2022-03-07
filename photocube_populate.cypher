@@ -9,7 +9,7 @@
 //DROP INDEX ON :TagSet(id);
 //DROP INDEX ON :Hierarchy(id);
 
-//MERGE constraints and indexes 
+//MERGE constraints and indexes - constrain == index
 CREATE INDEX FOR (o:Object) ON (o.id);
 CREATE INDEX FOR (t:Tag) ON (t.id);
 CREATE INDEX FOR (ts:Tagset) ON (ts.id);

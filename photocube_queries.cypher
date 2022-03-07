@@ -47,9 +47,9 @@ RETURN o;
 
 // postgres = - Neo4j = 323 ms
 // Combined state - dog, entity hierarchy, year 2015 - ids unknown - 295 ms
-MATCH (dogRoot: Node)-[:REPRESENTS]-(dogTag: Tag {name:"Dog"})
-MATCH (dogRoot)<-[:HAS_PARENT*]-()-[:REPRESENTS]->()<-[:TAGGED]-(o: Object)
-MATCH (ent : Node)-[:REPRESENTS]->(entTag: Tag {name: "Entity"})
+MATCH (root: Node)-[:REPRESENTS]-(dogTag: Tag:Alphanumerical {name:"Dog"})
+MATCH (root)<-[:HAS_PARENT*]-()-[:REPRESENTS]->()<-[:TAGGED]-(o: Object)
+MATCH (ent : Node)-[:REPRESENTS]->(entTag: Tag:Alphanumerical {name: "Entity"})
 WHERE EXISTS {
     MATCH (ent)<-[:HAS_PARENT*]-()-[:REPRESENTS]->()<-[:TAGGED]-(o)
 } AND EXISTS {
@@ -57,13 +57,17 @@ WHERE EXISTS {
 }
 RETURN o;
 
-// postgres = 7ms - Neo4j = 429 ms
+// postgres = 7ms - Neo4j = 120 ms
 //Combined state - dog, entity hierarchy, year 2015 -   ids known 
-MATCH (root: Node {id:691})-[:REPRESENTS]-(t: Tag)
-MATCH (root)<-[:HAS_PARENT*]-()-[:REPRESENTS]->()<-[:TAGGED]-(o: Object)
+MATCH (dog: Node {id:691})
+MATCH (ent: Node {id:40})
+MATCH (year:Tag:Numerical {id: 1350})
+MATCH (dog)<-[:HAS_PARENT*]-()-[:REPRESENTS]->()<-[:TAGGED]-(o: Object)
 WHERE EXISTS {
-    MATCH (ent: Node {id:40})<-[:HAS_PARENT*]-()-[:REPRESENTS]->()<-[:TAGGED]-(o)
+    MATCH  (year)<-[:TAGGED]-(o)
 } AND EXISTS {
-    MATCH  (tag :Tag:Numerical {id: 1350})<-[:TAGGED]-(o)
+    MATCH (ent)<-[:HAS_PARENT*]-()-[:REPRESENTS]->()<-[:TAGGED]-(o)
 }
 RETURN o;
+
+
