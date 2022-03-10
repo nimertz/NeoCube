@@ -45,19 +45,20 @@ RETURN o;
  MATCH (tag :Tag:Numerical {name:2015})<-[:TAGGED]-(o)
  return o;
 
-// postgres = - Neo4j = 323 ms
-// Combined state - dog, entity hierarchy, year 2015 - ids unknown - 295 ms
+// postgres = - Neo4j = 120 ms
+// Combined state - dog, entity hierarchy, year 2015 - ids unknown 
 MATCH (root: Node)-[:REPRESENTS]-(dogTag: Tag:Alphanumerical {name:"Dog"})
 MATCH (root)<-[:HAS_PARENT*]-()-[:REPRESENTS]->()<-[:TAGGED]-(o: Object)
 MATCH (ent : Node)-[:REPRESENTS]->(entTag: Tag:Alphanumerical {name: "Entity"})
 WHERE EXISTS {
-    MATCH (ent)<-[:HAS_PARENT*]-()-[:REPRESENTS]->()<-[:TAGGED]-(o)
-} AND EXISTS {
     MATCH (tag:Tag:Numerical {name:2015})<-[:TAGGED]-(o)
+} AND EXISTS {
+    MATCH (ent)<-[:HAS_PARENT*]-()-[:REPRESENTS]->()<-[:TAGGED]-(o)
 }
-RETURN o;
+RETURN DISTINCT o;
 
-// postgres = 7ms - Neo4j = 120 ms
+// https://localhost:5001/api/cell/?&filters=[{%22type%22:%22tag%22,%22ids%22:[1350]},{%22type%22:%22node%22,%22ids%22:[691]},{%22type%22:%22node%22,%22ids%22:[40]}]&all=[]
+// postgres = 1.7 s - Neo4j = cold - 1.2 s - warm - 90-120 ms
 //Combined state - dog, entity hierarchy, year 2015 -   ids known 
 MATCH (dog: Node {id:691})
 MATCH (ent: Node {id:40})
@@ -67,7 +68,9 @@ WHERE EXISTS {
     MATCH  (year)<-[:TAGGED]-(o)
 } AND EXISTS {
     MATCH (ent)<-[:HAS_PARENT*]-()-[:REPRESENTS]->()<-[:TAGGED]-(o)
-}
-RETURN o;
+} 
+MATCH (ts : Tag:Timestamp)<-[:TAGGED]-(o)
+RETURN DISTINCT o.id, o.file_uri, ts.name as timestamp
+ORDER BY ts.name;
 
 
