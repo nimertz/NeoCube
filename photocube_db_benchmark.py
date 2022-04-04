@@ -24,71 +24,69 @@ from psycopg2 import connect
 
 
 class Neo4jPhotocube:
-    numdims = 0
-    numtots = 0
-    dims = []
-    types = []
-    filts = []
+    """
+    This class is used to connect to the Neo4j database and execute queries.
+    """
 
     def __init__(self, driver, session):
         self.driver = driver
         self.session = session
 
-    @classmethod
-    def apply_filters(cls,midstr):
-        for i in range(cls.numdims, cls.numtots):
-            if cls.types[i] == "S":
-                midstr += "MATCH (fil%i_ts: Tagset {id: %i}) " % (i + 1, cls.filts[i])
+    @staticmethod
+    def apply_filters(midstr, numdims, numtots, types, filts):
+        for i in range(numdims, numtots):
+            if types[i] == "S":
+                midstr += "MATCH (fil%i_ts: Tagset {id: %i}) " % (i + 1, filts[i])
                 midstr += "MATCH (fil%i_ts)<-[:IN_TAGSET]-(R%i: Tag)<-[:TAGGED]-(o: Object)\n" % (i + 1, i + 1)
-            elif cls.types[i] == "H":
-                midstr += "MATCH (fil%i_n: Node {id: %i})\n" % (i + 1, cls.filts[i])
+            elif types[i] == "H":
+                midstr += "MATCH (fil%i_n: Node {id: %i})\n" % (i + 1, filts[i])
                 midstr += "MATCH (fil%i_n)<-[:HAS_PARENT*]-(R%i : Node)-[:REPRESENTS]->(:Tag)<-[:TAGGED]-(o: Object)\n" % (
                 i + 1, i + 1)
-            elif Neo4jPhotocube.types[i] == "T":
-                midstr += "MATCH (fil%i_t: Tag {id: %i})\n" % (i + 1, cls.filts[i])
+            elif types[i] == "T":
+                midstr += "MATCH (fil%i_t: Tag {id: %i})\n" % (i + 1, filts[i])
                 midstr += "MATCH (fil%i_t)<-[:TAGGED]-(o: Object)\n" % (i + 1)
-            elif cls.types[i] == "M":
+            elif types[i] == "M":
                 midstr += "MATCH (m_fil%i_t: Tag) WHERE m_fil%i_t.id IN [" % (i + 1, i + 1)
-                for j in range(len(cls.filts[i])):
+                for j in range(len(filts[i])):
                     if j == 0:
-                        midstr += "%i" % (cls.filts[i][j])
+                        midstr += "%i" % (filts[i][j])
                     else:
-                        midstr += ",%i" % (cls.filts[i][j])
+                        midstr += ",%i" % (filts[i][j])
                 midstr += "]\n"
                 midstr += "MATCH (m_fil%i_t)<-[:TAGGED]-(o: Object)\n" % (i + 1)
-            print(cls.types[i], cls.filts[i])
+            #print(types[i], filts[i])
         return midstr
 
-    @classmethod
-    def apply_dimensions(cls,endstr, midstr):
-        for i in range(cls.numdims):
-            endstr += ("R%i.id as %s, " % (i + 1, cls.attrs[i]))
+    @staticmethod
+    def apply_dimensions(endstr, midstr,attrs, numdims, types, filts):
+        for i in range(numdims):
+            endstr += ("R%i.id as %s, " % (i + 1, attrs[i]))
 
-            if cls.types[i] == "S":
-                midstr += "MATCH (dim%i_ts: Tagset {id: %i})\n" % (i + 1, cls.filts[i])
+            if types[i] == "S":
+                midstr += "MATCH (dim%i_ts: Tagset {id: %i})\n" % (i + 1, filts[i])
                 midstr += "MATCH (dim%i_ts)<-[:IN_TAGSET]-(R%i: Tag)<-[:TAGGED]-(o: Object)\n" % (i + 1, i + 1)
-            elif cls.types[i] == "H":
-                midstr += "MATCH (dim%i_n: Node {id: %i})\n" % (i + 1, cls.filts[i])
+            elif types[i] == "H":
+                midstr += "MATCH (dim%i_n: Node {id: %i})\n" % (i + 1, filts[i])
                 midstr += "MATCH (dim%i_n)<-[:HAS_PARENT*]-(R%i : Node)-[:REPRESENTS]->(:Tag)<-[:TAGGED]-(o: Object)\n" % (
                 i + 1, i + 1)
-            print(cls.types[i], cls.filts[i])
+            #print(types[i], filts[i])
         return endstr, midstr
 
-    @classmethod
-    def gen_state_query(cls):
+    @staticmethod
+    def gen_state_query(numdims, numtots, types, filts):
         attrs = ["idx", "idy", "idz"]
 
         frontstr = "" # add profile / explain here
         midstr = ""
         endstr = "RETURN "
         # handle empty dimensions
-        for i in range(cls.numdims, 3):
+        for i in range(numdims, 3):
             endstr += ("1 as %s, " % attrs[i])
         # apply dimensions
-        endstr, midstr = cls.apply_dimensions(endstr, midstr)
+        endstr, midstr = Neo4jPhotocube.apply_dimensions(endstr, midstr,attrs, numdims, types, filts)
 
         # apply rest of filters
-        midstr = cls.apply_filters(midstr)
+        midstr = Neo4jPhotocube.apply_filters(midstr, numdims, numtots, types, filts)
 
         endstr += "max(o).file_uri as file_uri, count(o) as cnt;"
 
@@ -131,7 +129,7 @@ def gen_random_id(max_id):
     return random.randint(1, max_id)
 
 def execute_benchmark(name, query_method, reps, max_id, result):
-    print(name)
+    print("Running " + name + " benchmark with " + str(reps) + " reps")
     for i in range(reps):
         start = datetime.datetime.now()
         query_method(session,gen_random_id(max_id))
@@ -142,8 +140,41 @@ def execute_benchmark(name, query_method, reps, max_id, result):
         result[name].append(duration.total_seconds() * 1e3)
     return result
 
+def state_benchmark(name, reps, result):
+    # generate different queries
+    type_options = ["S", "H"]
+    S_filter_max = max_tagset_id
+    H_filter_max = max_node_id
+    print("Running " + name + " benchmark with " + str(reps) + " reps")
+    for i in range(reps):
+        numdims = 3
+        numtots = 3
+        types = []
+        filts = []
+        for i in range(numdims):
+            types.append(type_options[random.randint(0, 1)])
+            if types[i] == "S":
+                filts.append(gen_random_id(S_filter_max))
+            else:
+                filts.append(gen_random_id(H_filter_max))
 
-def show_values(axs, orient="v", space=.01):
+        #print(str(types) + "\n" + str(filts))
+
+        start = datetime.datetime.now()
+        neo.query_state(session, Neo4jPhotocube.gen_state_query(numdims, numtots, types, filts))
+        end = datetime.datetime.now()
+        duration = end - start
+        time = duration.total_seconds() * 1e3
+        if time > 2000:
+            print("time: " + str(round(time, 2)) + " ms" +
+                  " query: " + str(types) + " " + str(filts))
+        if name not in result:
+            result[name] = []
+        result[name].append(time)
+    return result
+
+
+def show_barchart_values(axs, orient="v", space=.01):
     def _single(ax):
         if orient == "v":
             for p in ax.patches:
@@ -164,6 +195,17 @@ def show_values(axs, orient="v", space=.01):
     else:
         _single(axs)
 
+def format_data_barchart(raw_results):
+    results = {'data': [], 'sd': [], 'category': [], 'query': []}
+    for key in raw_results:
+        results['data'].extend(
+            [sum(raw_results[key]) / len(raw_results[key]), np.percentile(raw_results[key], 99),
+             max(raw_results[key]), min(raw_results[key]), np.median(raw_results[key]), np.std(raw_results[key])])
+        results['sd'].extend([np.std(raw_results[key])] * 6)
+        results['category'].extend(['avg', 'avg 99th', 'max', 'min', 'median', 'stdev'])
+        results['query'].extend([key] * 6)
+    return results
+
 driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "123"))
 session = driver.session()
 neo = Neo4jPhotocube(driver, session)
@@ -181,25 +223,21 @@ reps = 10
 execute_benchmark("get_tag_by_id", neo.get_tag_by_id, reps, max_tag_id, raw_results)
 execute_benchmark("get_node_tag_subtree", neo.get_node_tag_subtree, reps, max_node_id, raw_results)
 execute_benchmark("get_tags_in_tagset",neo.get_tags_in_tagset, reps, max_tagset_id, raw_results)
+state_benchmark("get_state", reps, raw_results)
 
-results = {'data': [],'sd': [], 'category': [], 'query': []}
-for key in raw_results:
-    results['data'].extend(
-        [sum(raw_results[key]) / len(raw_results[key]), np.percentile(raw_results[key], 99),
-         max(raw_results[key]), min(raw_results[key]), np.median(raw_results[key]), np.std(raw_results[key])])
-    results['category'].extend(['avg', 'avg 99th', 'max', 'min', 'median', 'stdev'])
-    results['query'].extend([key,key,key,key,key,key])
+results = format_data_barchart(raw_results)
 
 #print(results)
 
 # seaborn bar plot of results
 sns.set(style="darkgrid")
-ax = sns.barplot(x="query", y="data",hue="category", data=results, log=True)
-ax.set(xlabel='Query', ylabel='Time (ms) - log scale')
-show_values(ax)
+sns.despine()
+ax = sns.barplot(x="query", y="data",hue="category", data=results, log=True,ci="sd",palette="Set2")
+ax.set(xlabel='Query', ylabel='Time (ms) - log scale', title='Photocube latency results')
+show_barchart_values(ax)
+#TODO set standard deviation error bars on the barchart
 
 plt.show()
-
 
 
 
