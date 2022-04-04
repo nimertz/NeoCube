@@ -97,4 +97,24 @@ RETURN t.id as idx, t1.id as idy, n.id as idz, max(o).file_uri as file_uri, coun
 
 
 
+MATCH (ts: Tagset {id: 10})<-[:IN_TAGSET]-(t: Tag)<-[:TAGGED]-(o: Object)
+MATCH (ts1: Tagset {id: 2})<-[:IN_TAGSET]-(t1: Tag)<-[:TAGGED]-(o)
+MATCH (p: Node {id:5})<-[:HAS_PARENT*]-(n : Node)-[:REPRESENTS]->(:Tag)<-[:TAGGED]-(o)
+RETURN t.id as idx, t1.id as idy, n.id as idz, max(o).file_uri as file_uri, count(o) as cnt;
 
+
+
+MATCH (ts: Tagset {id: 10})<-[:IN_TAGSET]-(t: Tag)<-[:TAGGED]-(o: Object)-[:TAGGED]->(t1: Tag)-[:IN_TAGSET]->(ts1: Tagset {id: 2})
+MATCH (p: Node {id:5})<-[:HAS_PARENT*]-(n : Node)-[:REPRESENTS]->(:Tag)<-[:TAGGED]-(o)
+RETURN t.id as idx, t1.id as idy, n.id as idz, max(o).file_uri as file_uri, count(o) as cnt;
+
+MATCH (ts: Tagset {id: 10})
+MATCH (ts)<-[:IN_TAGSET]-(t: Tag)<-[:TAGGED]-(o: Object)
+with o, t.id as idx
+MATCH (ts1: Tagset {id: 2})
+MATCH (ts1)<-[:IN_TAGSET]-(t1: Tag)<-[:TAGGED]-(o)
+with o,t1.id as idy, idx
+MATCH (p: Node {id:5})
+MATCH (p)<-[:HAS_PARENT*]-(n : Node)-[:REPRESENTS]->(:Tag)<-[:TAGGED]-(o)
+with o, idx,idy,n.id as idz
+RETURN idx, idy, idz, max(o).file_uri as file_uri, count(o) as cnt;

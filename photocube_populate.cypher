@@ -10,11 +10,11 @@
 //DROP INDEX ON :Hierarchy(id);
 
 //MERGE constraints and indexes - constrain == index
-CREATE INDEX FOR (o:Object) ON (o.id);
-CREATE INDEX FOR (t:Tag) ON (t.id);
-CREATE INDEX FOR (ts:Tagset) ON (ts.id);
-CREATE INDEX FOR (h:Hierarchy) ON (h.id);
-CREATE INDEX FOR (n:Node) ON (n.id);
+CREATE INDEX objects IF NOT EXISTS FOR (o:Object) ON (o.id);
+CREATE INDEX tags IF NOT EXISTS FOR (t:Tag) ON (t.id);
+CREATE INDEX tagsets IF NOT EXISTS FOR (ts:Tagset) ON (ts.id);
+CREATE INDEX hierarchies IF NOT EXISTS FOR (h:Hierarchy) ON (h.id);
+CREATE INDEX nodes IF NOT EXISTS FOR (n:Node) ON (n.id);
 
 //Load photocube data
 :auto USING PERIODIC COMMIT 500

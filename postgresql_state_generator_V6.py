@@ -24,6 +24,7 @@ def print_state(query):
     cursor.execute(query)
 
     results = cursor.fetchall()
+    print(len(results))
     for row in results:
         #print("idx:%i:idy:%i:idz:%i:cnt:%i:uri:%s" % (row[0], row[1], row[2], row[4], row[3]))
         pass

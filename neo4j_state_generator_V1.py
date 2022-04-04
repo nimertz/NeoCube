@@ -15,9 +15,11 @@ driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "123"))
 
 def print_state(query):
     results = session.read_transaction(query_state, query)
-
-    for row in results:
-        print("idx:%i:idy:%i:idz:%i:cnt:%i:uri:%s" % (row[0], row[1], row[2], row[4], row[3]))
+    print("Records: %i" % len(results))
+    if(len(results) <= 10):
+        for row in results:
+            print("idx:%i:idy:%i:idz:%i:cnt:%i:uri:%s" % (row[0], row[1], row[2], row[4], row[3]))
+            #pass
 
 attrs = ["idx", "idy", "idz"]
 def get_state():
@@ -92,6 +94,11 @@ def apply_dimensions(endstr, midstr):
 
 def query_state(tx, query):
     result = tx.run(query)
+    return list(result)
+
+
+def get_tag_by_id(tx, tag_id):
+    result = tx.run("MATCH (t:Tag {id: $tag_id}) RETURN t.name as name, labels(t)", tag_id=tag_id)
     return list(result)
 
 def get_tags_in_tagset(tx,tagset_id):
@@ -171,6 +178,11 @@ with driver.session() as session:
             dims[numtots].append(int(C[1]))
             filts.append(int(C[1]))
 
+            results = session.read_transaction(get_tag_by_id, int(C[1]))
+            for row in results:
+                print("tagname =", row[0], " type =", row[1][1])
+                #pass
+
             numtots += 1
             if readingdims:
                 numdims = numdims + 1
@@ -181,6 +193,12 @@ with driver.session() as session:
             types.append("M")
             for i in range(num):
                 dims[numtots].append(int(C[i+2]))
+                
+                results = session.read_transaction(get_tag_by_id, int(C[i+2]))
+                for row in results:
+                    print("tagname =", row[0], " type =", row[1][1])
+                    #pass
+
             filts.append(dims[numtots])
 
             numtots += 1
