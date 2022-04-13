@@ -24,7 +24,7 @@ class PostgresqlPhotocube:
         return cursor.fetchall()
 
     @staticmethod
-    def gen_state_query(numdims, numtots, types, filts):
+    def gen_state_query(numdims, numtots, types, filts, baseline = False):
         attrs = ["idx", "idy", "idz"]
 
         frontstr = "select X.idx, X.idy, X.idz, O.file_uri, X.cnt from (select "
@@ -34,13 +34,23 @@ class PostgresqlPhotocube:
             frontstr = frontstr + ("R%i.id as %s, " % (i + 1, attrs[i]))
 
             if types[i] == "S":
-                midstr = midstr + (
-                            "select T.object_id, T.tag_id as id from tagsets_taggings T where T.tagset_id = %i) R%i " % (
-                    filts[i], i + 1))
+                if baseline:
+                    midstr = midstr + (
+                                "select T.object_id, T.tag_id as id from (SELECT t.tagset_id, r.tag_id, r.object_id FROM tags t JOIN objecttagrelations r ON r.tag_id = t.id) T where T.tagset_id = %i) R%i " % (
+                        filts[i], i + 1))
+                else:
+                    midstr = midstr + (
+                                "select T.object_id, T.tag_id as id from tagsets_taggings T where T.tagset_id = %i) R%i " % (
+                        filts[i], i + 1))
             elif types[i] == "H":
-                midstr = midstr + (
-                            "select N.object_id, N.node_id as id from nodes_taggings N where N.parentnode_id = %i) R%i " % (
-                    filts[i], i + 1))
+                if baseline:
+                    midstr = midstr + (
+                                "select N.object_id, N.node_id as id from (SELECT h.parentnode_id, h.node_id, h.tag_id, o.object_id FROM (SELECT n.parentnode_id, n.id AS node_id, (get_subtree_from_parent_node(n.id)).tag_id AS tag_id FROM nodes n) h JOIN objecttagrelations o ON o.tag_id = h.tag_id) N where N.parentnode_id = %i) R%i " % (
+                        filts[i], i + 1))
+                else:
+                    midstr = midstr + (
+                                "select N.object_id, N.node_id as id from nodes_taggings N where N.parentnode_id = %i) R%i " % (
+                        filts[i], i + 1))
 
             if i == 0:
                 midstr = midstr + "join ("
@@ -56,13 +66,23 @@ class PostgresqlPhotocube:
 
         for i in range(numdims, numtots):
             if types[i] == "S":
-                midstr = midstr + (
-                            "select T.object_id, T.tag_id as id from tagsets_taggings T where T.tagset_id = %i) R%i " % (
-                    filts[i], i + 1))
+                if baseline:
+                    midstr = midstr + (
+                                "select T.object_id, T.tag_id as id from (SELECT t.tagset_id, r.tag_id, r.object_id FROM tags t JOIN objecttagrelations r ON r.tag_id = t.id) T where T.tagset_id = %i) R%i " % (
+                        filts[i], i + 1))
+                else:
+                    midstr = midstr + (
+                                "select T.object_id, T.tag_id as id from tagsets_taggings T where T.tagset_id = %i) R%i " % (
+                        filts[i], i + 1))
             elif types[i] == "H":
-                midstr = midstr + (
-                            "select N.object_id, N.node_id as id from nodes_taggings N where N.parentnode_id = %i) R%i " % (
-                    filts[i], i + 1))
+                if baseline:
+                    midstr = midstr + (
+                                "select N.object_id, N.node_id as id from (SELECT h.parentnode_id, h.node_id, h.tag_id, o.object_id FROM (SELECT n.parentnode_id, n.id AS node_id, (get_subtree_from_parent_node(n.id)).tag_id AS tag_id FROM nodes n) h JOIN objecttagrelations o ON o.tag_id = h.tag_id) N where N.parentnode_id = %i) R%i " % (
+                        filts[i], i + 1))
+                else:
+                    midstr = midstr + (
+                                "select N.object_id, N.node_id as id from nodes_taggings N where N.parentnode_id = %i) R%i " % (
+                        filts[i], i + 1))
             elif types[i] == "T":
                 midstr = midstr + ("select R.object_id from objecttagrelations R where R.tag_id = %i) R%i " % (
                 filts[i], i + 1))
@@ -94,3 +114,15 @@ class PostgresqlPhotocube:
     def execute_query(cursor,sqlstr):
         cursor.execute(sqlstr)
         return cursor.fetchall()
+
+    @staticmethod
+    def drop_materialized_indexes(cursor):
+        cursor.execute("DROP INDEX IF EXISTS tagsets_taggings_sid_oid_tid;")
+        cursor.execute("DROP INDEX IF EXISTS nodes_taggings_pid_oid_nid;")
+        cursor.execute("DROP INDEX IF EXISTS nodes_taggings_nid_oid;")
+
+    @staticmethod
+    def create_materialized_indexes(cursor):
+        cursor.execute("create index tagsets_taggings_sid_oid_tid on tagsets_taggings (tagset_id, object_id, tag_id);")
+        cursor.execute("create index nodes_taggings_pid_oid_nid on nodes_taggings (parentnode_id, object_id, node_id);")
+        cursor.execute("create index nodes_taggings_nid_oid on nodes_taggings (node_id, object_id);")
