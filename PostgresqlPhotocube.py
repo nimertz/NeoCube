@@ -2,26 +2,36 @@
 class PostgresqlPhotocube:
     def __init__(self,conn):
         self.conn = conn
-        self.cursor = self.conn.cursor()
 
-
-    def disconnect(self):
+    def close(self):
         self.conn.close()
 
     @staticmethod
-    def get_tag_by_id(cursor, tag_id):
+    def _get_tag_by_id(cursor, tag_id):
         cursor.execute("SELECT * FROM tags WHERE id = %s", (tag_id,))
         return cursor.fetchone()
 
+    def get_tag_by_id(self,tag_id):
+        with self.conn.cursor() as cursor:
+            return self._get_tag_by_id(cursor,tag_id)
+
     @staticmethod
-    def get_tags_in_tagset(cursor, tagset_id):
+    def _get_tags_in_tagset(cursor, tagset_id):
         cursor.execute("select * from tags where tagset_id = %i;" % (tagset_id))
         return cursor.fetchall()
 
+    def get_tags_in_tagset(self,tagset_id):
+        with self.conn.cursor() as cursor:
+            return self._get_tags_in_tagset(cursor,tagset_id)
+
     @staticmethod
-    def get_level_from_parent_node(cursor, node_id, hierarchy_id):
+    def _get_level_from_parent_node(cursor, node_id, hierarchy_id):
         cursor.execute("select * from get_level_from_parent_node(%i, %i);" % (node_id, hierarchy_id))
         return cursor.fetchall()
+    
+    def get_level_from_parent_node(self,node_id,hierarchy_id):
+        with self.conn.cursor() as cursor:
+            return self._get_level_from_parent_node(cursor,node_id,hierarchy_id)
 
     @staticmethod
     def gen_state_query(numdims, numtots, types, filts, baseline = False):
@@ -111,18 +121,32 @@ class PostgresqlPhotocube:
         return sqlstr
 
     @staticmethod
-    def execute_query(cursor,sqlstr):
+    def _execute_query(cursor,sqlstr):
         cursor.execute(sqlstr)
         return cursor.fetchall()
+    
+    def execute_query(self, sqlstr):
+        with self.conn.cursor() as cursor:
+            return self._execute_query(cursor,sqlstr)
 
     @staticmethod
-    def drop_materialized_indexes(cursor):
+    def _drop_materialized_indexes(cursor):
         cursor.execute("DROP INDEX IF EXISTS tagsets_taggings_sid_oid_tid;")
         cursor.execute("DROP INDEX IF EXISTS nodes_taggings_pid_oid_nid;")
         cursor.execute("DROP INDEX IF EXISTS nodes_taggings_nid_oid;")
 
+    def drop_materialized_indexes(self):
+        with self.conn.cursor() as cursor:
+            self._drop_materialized_indexes(cursor)
+
     @staticmethod
-    def create_materialized_indexes(cursor):
+    def _create_materialized_indexes(cursor):
         cursor.execute("create index tagsets_taggings_sid_oid_tid on tagsets_taggings (tagset_id, object_id, tag_id);")
         cursor.execute("create index nodes_taggings_pid_oid_nid on nodes_taggings (parentnode_id, object_id, node_id);")
         cursor.execute("create index nodes_taggings_nid_oid on nodes_taggings (node_id, object_id);")
+
+    def create_materialized_indexes(self):
+        with self.conn.cursor() as cursor:
+            self._create_materialized_indexes(cursor)
+    
+    

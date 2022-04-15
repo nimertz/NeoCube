@@ -3,10 +3,11 @@
 This is a benchmarking suite used to compare PostgreSQL and Neo4j photocube queries.
 
 Dependencies:
-pip install numpy
-pip install seaborn
-pip install neo4j
-pip install psycopg2
+pip install numpy - for plotting custom barcharts
+pip install click - for command line interface
+pip install seaborn - for plotting
+pip install neo4j - To install Neo4j driver (4.4.0)
+pip install psycopg - To install PostgreSQL driver (3.0.11)
 """
 __author__ = "Nikolaj Mertz"
 
@@ -18,10 +19,9 @@ import logging
 import sys
 
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import psycopg2
 import seaborn as sbn
+import numpy as np
+import psycopg
 from neo4j import GraphDatabase
 
 import Neo4JPhotocube
@@ -31,11 +31,11 @@ import PostgresqlPhotocube
 def gen_random_id(max_id):
     return random.randint(1, max_id)
 
-def exec_bench_rand_id(name, category, session, query_method, reps, max_id, result):
+def exec_bench_rand_id(name, category, query_method, reps, max_id, result):
     logger.info("Running " + name + " benchmark in " + category + " with " + str(reps) + " reps")
     for _ in range(reps):
         start = datetime.datetime.now()
-        query_method(session,gen_random_id(max_id))
+        query_method(gen_random_id(max_id))
         end = datetime.datetime.now()
         duration = end - start
         result["query"].append(name)
@@ -64,24 +64,25 @@ def random_state_benchmark(reps,result):
         #print(str(types) + "\n" + str(filts))
 
         start = datetime.datetime.now()
-        neo.query_state(session, neo.gen_state_query(numdims, numtots, types, filts))
+        neo.query_state(neo.gen_state_query(numdims, numtots, types, filts))
         end = datetime.datetime.now()
         duration = end - start
         neo4j_time = duration.total_seconds() * 1e3
         if neo4j_time > 2000:
-            logger.warn("Neo4j time: " + str(round(neo4j_time, 2)) + " ms" +
+            logger.warning("Neo4j time: " + str(round(neo4j_time, 2)) + " ms" +
                   " query: " + str(types) + " " + str(filts))
         result["query"].append("Random state")
         result["latency"].append(neo4j_time)
         result["category"].append("Neo4j")
 
         start = datetime.datetime.now()
-        psql.execute_query(psql.cursor,psql.gen_state_query(numdims, numtots, types, filts))
+        psql.execute_query(psql.gen_state_query(numdims, numtots, types, filts))
         end = datetime.datetime.now()
+
         duration = end - start
         psql_time = duration.total_seconds() * 1e3
         if psql_time > 2000:
-            logger.warn("PostgreSQL time: " + str(round(psql_time, 2)) + " ms" +
+            logger.warning("PostgreSQL time: " + str(round(psql_time, 2)) + " ms" +
                   " query: " + str(types) + " " + str(filts))
         result["query"].append("Random state")
         result["latency"].append(psql_time)
@@ -110,7 +111,7 @@ def neo4j_state_benchmark(name, reps, result):
         #print(str(types) + "\n" + str(filts))
 
         start = datetime.datetime.now()
-        neo.query_state(session, neo.gen_state_query(numdims, numtots, types, filts))
+        neo.query_state(neo.gen_state_query(numdims, numtots, types, filts))
         end = datetime.datetime.now()
         duration = end - start
         time = duration.total_seconds() * 1e3
@@ -143,12 +144,13 @@ def postgresql_state_benchmark(name, reps, result):
         #print(str(types) + "\n" + str(filts))
 
         start = datetime.datetime.now()
-        psql.execute_query(psql.cursor,psql.gen_state_query(numdims, numtots, types, filts))
+        psql.execute_query(psql.gen_state_query(numdims, numtots, types, filts))
         end = datetime.datetime.now()
+
         duration = end - start
         time = duration.total_seconds() * 1e3
         if time > 2000:
-            logger.warn("time: " + str(round(time, 2)) + " ms" +
+            logger.warning("time: " + str(round(time, 2)) + " ms" +
                   " query: " + str(types) + " " + str(filts))
         if name not in result:
             result[name] = []
@@ -160,9 +162,9 @@ def create_barchart(title, results):
     sbn.set(style="darkgrid")
     sbn.despine()
     ax = sbn.barplot(x="query", y="latency",hue="category", data=results, log=True,palette="Set2", capsize=.1)
-    ax.set(xlabel='Query', ylabel='Mean Latency (ms) - log scale', title=title)
+    ax.set(xlabel='Query', ylabel='Mean Latency (ms) - Log scale', title=title)
     show_barchart_values(ax)
-    logger.info("Barchart created for : " + title)
+    logger.info("Latency barchart created for : " + title)
     return ax
 
 def show_barchart_values(axs, orient="v", space=.01):
@@ -189,8 +191,9 @@ def show_barchart_values(axs, orient="v", space=.01):
 def state_bench(reps,query,name,category,result):
     for i in range(reps):
         start = datetime.datetime.now()
-        psql.execute_query(psql.cursor, query)
+        psql.execute_query(query)
         end = datetime.datetime.now()
+
         duration = (end - start).total_seconds() * 1e3
         result["query"].append(name)
         result["latency"].append(duration)
@@ -202,13 +205,12 @@ def baseline_materialize_index_benchmark(category, reps, result, numdims, numtot
     materializedViewQuery = psql.gen_state_query(numdims, numtots, types, filts)
 
     #drop materialized view indexes
-    psql.drop_materialized_indexes(psql.cursor)
+    psql.drop_materialized_indexes()
 
     state_bench(reps, baselineQuery, "Baseline", category, result)
     state_bench(reps, materializedViewQuery,"Materialized Views", category, result)
     #create materialized view indexes
-    psql.create_materialized_indexes(psql.cursor)
-    
+    psql.create_materialized_indexes()
     state_bench(reps, materializedViewQuery,"Indexed Views", category, result)
     return result
 
@@ -250,40 +252,6 @@ def complex_state_benchmark(category,reps,result):
 
     return baseline_materialize_index_benchmark(category, reps, result, numdims, numtots, types, filts)
 
-@click.command()
-def standard_latency_benchmark(reps):
-    logger.info("Running standard latency benchmark with " + str(reps) + " reps")
-    results = {'query': [], 'latency': [], 'category': []}
-
-    exec_bench_rand_id("Tag by id", "PostgreSQL", psql.cursor, psql.get_tag_by_id, reps, max_tag_id, results)
-    exec_bench_rand_id("Tag by id", "Neo4j", neo.session, neo.get_tag_by_id, reps, max_tag_id, results)
-
-    exec_bench_rand_id("Tags in tagset", "PostgreSQL", psql.cursor, psql.get_tags_in_tagset, reps, max_tagset_id, results)
-    exec_bench_rand_id("Tags in tagset", "Neo4j", session, neo.get_tags_in_tagset, reps, max_tagset_id, results)
-
-    exec_bench_rand_id("Node tag subtree", "Neo4j", session, neo.get_node_tag_subtree, reps, max_node_id, results)
-
-    random_state_benchmark(reps, results)
-
-    title = "Latency of Photocube queries of Neo4j and Postgresql" + "\n" + "Query repetition: %i " % reps
-    create_barchart(title, results)
-    plt.show()
-
-@click.command()
-def state_scenarious_and_progression_benchmark(reps):
-    logger.info("Running state scenarious and progression benchmark with " + str(reps) + " reps")
-    results = {'query': [], 'latency': [], 'category': []}
-
-    simple_state_benchmark("Simple", reps,results)
-    medium_state_benchmark("Medium",reps,results)
-    complex_state_benchmark("Complex",reps,results)
-
-    title ='Photocube state latency results \n repetitions:' + str(reps) + ''
-    create_barchart(title,results)
-    plt.show()
-
-
-
 #Creating and Configuring Logger
 
 Log_Format = "%(levelname)s %(asctime)s - %(message)s"
@@ -301,14 +269,61 @@ max_hierarchy_id = 3
 max_node_id = 8842
 max_object_id = 183386
 
-reps = 1
-
 driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "123"))
-session = driver.session()
-neo = Neo4JPhotocube.Neo4jPhotocube(driver, session)
+neo = Neo4JPhotocube.Neo4jPhotocube(driver)
 
-psql_conn = psycopg2.connect(user="photocube", password="123", host="127.0.0.1", port="5432", database="photocube")
+psql_conn = psycopg.connect(user="photocube", password="123", host="127.0.0.1", port="5432", dbname="photocube")
 psql = PostgresqlPhotocube.PostgresqlPhotocube(psql_conn)
 
-standard_latency_benchmark(reps)
-state_scenarious_and_progression_benchmark(reps)
+
+
+@click.group()
+def benchmark():
+    pass
+
+@benchmark.command("complete")
+@click.option("--r", default=10, help="Number of repetitions")
+def standard_latency_benchmark(r):
+    logger.info("Running standard latency benchmark with " + str(r) + " repetitions")
+    results = {'query': [], 'latency': [], 'category': []}
+
+    exec_bench_rand_id("Tag by id", "PostgreSQL", psql.get_tag_by_id, r, max_tag_id, results)
+    exec_bench_rand_id("Tag by id", "Neo4j", neo.get_tag_by_id, r, max_tag_id, results)
+
+
+
+    exec_bench_rand_id("Tags in tagset", "PostgreSQL", psql.get_tags_in_tagset, r, max_tagset_id, results)
+    exec_bench_rand_id("Tags in tagset", "Neo4j", neo.get_tags_in_tagset, r, max_tagset_id, results)
+
+    exec_bench_rand_id("Node tag subtree", "Neo4j", neo.get_node_tag_subtree, r, max_node_id, results)
+
+    random_state_benchmark(r, results)
+
+    title = "Latency of Photocube queries of Neo4j and Postgresql" + "\n" + "Query repetitions: %i " % r
+    create_barchart(title, results)
+    plt.show()
+    neo.close()
+    psql.close()
+
+@benchmark.command(name="state")
+@click.option("--r", default=10, help="Number of repetitions")
+def state_scenarios_and_progression_benchmark(r):
+    logger.info("Running state scenarios and progression benchmark with " + str(r) + " repetitions")
+    results = {'query': [], 'latency': [], 'category': []}
+
+    simple_state_benchmark("Simple", r,results)
+    medium_state_benchmark("Medium",r,results)
+    complex_state_benchmark("Complex",r,results)
+
+    title ='Photocube state latency results \n Query repetitions:' + str(r) + ''
+    create_barchart(title,results)
+    plt.show()
+    neo.close()
+    psql.close()
+
+
+if __name__ == '__main__':
+    benchmark()
+
+
+

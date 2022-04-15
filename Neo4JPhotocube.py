@@ -6,9 +6,12 @@ class Neo4jPhotocube:
     This class is used to connect to the Neo4j database and execute queries.
     """
 
-    def __init__(self, driver, session):
+    def __init__(self, driver):
         self.driver = driver
-        self.session = session
+
+    def close(self):
+        # Don't forget to close the driver connection when you are finished with it
+        self.driver.close()
 
     @staticmethod
     def apply_filters(midstr, numdims, numtots, types, filts):
@@ -71,31 +74,50 @@ class Neo4jPhotocube:
         neo4j_query = ("\n%s %s %s\n" % (frontstr, midstr, endstr))
         return neo4j_query
 
+    def query_state(self,query):
+        with self.driver.session() as session:
+            session.read_transaction(self._query_state, query)
+
     @staticmethod
-    def query_state(tx, query):
+    def _query_state(tx, query):
         result = tx.run(query)
         return list(result)
 
+    def get_tag_by_id(self,tag_id):
+        with self.driver.session() as session:
+            session.read_transaction(self._get_tag_by_id, tag_id)
 
     @staticmethod
-    def get_tag_by_id(tx, tag_id):
+    def _get_tag_by_id(tx, tag_id):
         result = tx.run("MATCH (t:Tag {id: $tag_id}) RETURN t.name as name, labels(t)", tag_id=tag_id)
         return list(result)
 
+    def get_tags_in_tagset(self,tagset_id):
+        with self.driver.session() as session:
+            session.read_transaction(self._get_tags_in_tagset, tagset_id)
+
     @staticmethod
-    def get_tags_in_tagset(tx,tagset_id):
+    def _get_tags_in_tagset(tx,tagset_id):
         result = tx.run("MATCH (t:Tag)-[:IN_TAGSET]->(ts:Tagset {id: $tagset_id}) RETURN t.id,t.name, labels(t), ts.id", tagset_id=tagset_id)
         return list(result)
 
+    def get_level_from_parent_node(self,node_id,hierarchy_id):
+        with self.driver.session() as session:
+            session.read_transaction(self._get_level_from_parent_node, node_id, hierarchy_id)
+
     @staticmethod
-    def get_level_from_parent_node(tx,node_id,hierarchy_id):
+    def _get_level_from_parent_node(tx,node_id,hierarchy_id):
         result = tx.run("MATCH (root:Node {id: $node_id})<-[:HAS_PARENT]-(n : Node)-[:IN_HIERARCHY]->(h:Hierarchy {id: $hierarchy_id}) "
                         "MATCH (n)-[:REPRESENTS]->(t:Tag) "
                         "RETURN n.id, t.id, h.id, root.id", node_id=node_id, hierarchy_id=hierarchy_id)
         return list(result)
 
+    def get_node_tag_subtree(self,node_id):
+        with self.driver.session() as session:
+            session.read_transaction(self._get_node_tag_subtree, node_id)
+
     @staticmethod
-    def get_node_tag_subtree(tx, node_id):
+    def _get_node_tag_subtree(tx, node_id):
         result = tx.run(
             "MATCH (root:Node {id: $node_id})<-[:HAS_PARENT]-(n : Node)-[:IN_HIERARCHY]->(h:Hierarchy) "
             "MATCH (n)-[:REPRESENTS]->(t:Tag) "
