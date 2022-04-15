@@ -160,10 +160,13 @@ def postgresql_state_benchmark(name, reps, result):
 def create_barchart(title, results):
     # seaborn bar plot of results
     sbn.set(style="darkgrid")
-    sbn.despine()
-    ax = sbn.barplot(x="query", y="latency",hue="category", data=results, log=True,palette="Set2", capsize=.1)
+    
+    ax = sbn.barplot(x="query", y="latency",hue="category", data=results, log=True,palette="Set2", capsize=.05)
     ax.set(xlabel='Query', ylabel='Mean Latency (ms) - Log scale', title=title)
+    
     show_barchart_values(ax)
+
+    sbn.despine()
     logger.info("Latency barchart created for : " + title)
     return ax
 
@@ -171,7 +174,7 @@ def show_barchart_values(axs, orient="v", space=.01):
     def _single(ax):
         if orient == "v":
             for p in ax.patches:
-                _x = p.get_x() + p.get_width() / 1.7 # change to move text to the right
+                _x = p.get_x() + p.get_width() / 1.5 # change to move text to the right
                 _y = p.get_y() + p.get_height() + (p.get_height()*0.01)
                 value = '{:.1f}'.format(p.get_height())
                 ax.text(_x, _y, value, ha="left")

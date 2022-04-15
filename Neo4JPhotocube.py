@@ -14,7 +14,7 @@ class Neo4jPhotocube:
         self.driver.close()
 
     @staticmethod
-    def apply_filters(midstr, numdims, numtots, types, filts):
+    def __apply_filters(midstr, numdims, numtots, types, filts):
         for i in range(numdims, numtots):
             if types[i] == "S":
                 midstr += "MATCH (fil%i_ts: Tagset {id: %i}) " % (i + 1, filts[i])
@@ -39,7 +39,7 @@ class Neo4jPhotocube:
         return midstr
 
     @staticmethod
-    def apply_dimensions(endstr, midstr,attrs, numdims, types, filts):
+    def __apply_dimensions(endstr, midstr,attrs, numdims, types, filts):
         for i in range(numdims):
             endstr += ("R%i.id as %s, " % (i + 1, attrs[i]))
 
@@ -64,10 +64,10 @@ class Neo4jPhotocube:
         for i in range(numdims, 3):
             endstr += ("1 as %s, " % attrs[i])
         # apply dimensions
-        endstr, midstr = Neo4jPhotocube.apply_dimensions(endstr, midstr,attrs, numdims, types, filts)
+        endstr, midstr = Neo4jPhotocube.__apply_dimensions(endstr, midstr,attrs, numdims, types, filts)
 
         # apply rest of filters
-        midstr = Neo4jPhotocube.apply_filters(midstr, numdims, numtots, types, filts)
+        midstr = Neo4jPhotocube.__apply_filters(midstr, numdims, numtots, types, filts)
 
         endstr += "max(o).file_uri as file_uri, count(o) as cnt;"
 
@@ -76,37 +76,37 @@ class Neo4jPhotocube:
 
     def query_state(self,query):
         with self.driver.session() as session:
-            session.read_transaction(self._query_state, query)
+            session.read_transaction(self.__query_state, query)
 
     @staticmethod
-    def _query_state(tx, query):
+    def __query_state(tx, query):
         result = tx.run(query)
         return list(result)
 
     def get_tag_by_id(self,tag_id):
         with self.driver.session() as session:
-            session.read_transaction(self._get_tag_by_id, tag_id)
+            session.read_transaction(self.__get_tag_by_id, tag_id)
 
     @staticmethod
-    def _get_tag_by_id(tx, tag_id):
+    def __get_tag_by_id(tx, tag_id):
         result = tx.run("MATCH (t:Tag {id: $tag_id}) RETURN t.name as name, labels(t)", tag_id=tag_id)
         return list(result)
 
     def get_tags_in_tagset(self,tagset_id):
         with self.driver.session() as session:
-            session.read_transaction(self._get_tags_in_tagset, tagset_id)
+            session.read_transaction(self.__get_tags_in_tagset, tagset_id)
 
     @staticmethod
-    def _get_tags_in_tagset(tx,tagset_id):
+    def __get_tags_in_tagset(tx,tagset_id):
         result = tx.run("MATCH (t:Tag)-[:IN_TAGSET]->(ts:Tagset {id: $tagset_id}) RETURN t.id,t.name, labels(t), ts.id", tagset_id=tagset_id)
         return list(result)
 
     def get_level_from_parent_node(self,node_id,hierarchy_id):
         with self.driver.session() as session:
-            session.read_transaction(self._get_level_from_parent_node, node_id, hierarchy_id)
+            session.read_transaction(self.__get_level_from_parent_node, node_id, hierarchy_id)
 
     @staticmethod
-    def _get_level_from_parent_node(tx,node_id,hierarchy_id):
+    def __get_level_from_parent_node(tx,node_id,hierarchy_id):
         result = tx.run("MATCH (root:Node {id: $node_id})<-[:HAS_PARENT]-(n : Node)-[:IN_HIERARCHY]->(h:Hierarchy {id: $hierarchy_id}) "
                         "MATCH (n)-[:REPRESENTS]->(t:Tag) "
                         "RETURN n.id, t.id, h.id, root.id", node_id=node_id, hierarchy_id=hierarchy_id)
@@ -114,10 +114,10 @@ class Neo4jPhotocube:
 
     def get_node_tag_subtree(self,node_id):
         with self.driver.session() as session:
-            session.read_transaction(self._get_node_tag_subtree, node_id)
+            session.read_transaction(self.__get_node_tag_subtree, node_id)
 
     @staticmethod
-    def _get_node_tag_subtree(tx, node_id):
+    def __get_node_tag_subtree(tx, node_id):
         result = tx.run(
             "MATCH (root:Node {id: $node_id})<-[:HAS_PARENT]-(n : Node)-[:IN_HIERARCHY]->(h:Hierarchy) "
             "MATCH (n)-[:REPRESENTS]->(t:Tag) "
