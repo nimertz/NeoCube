@@ -74,12 +74,12 @@ class Neo4jPhotocube:
         neo4j_query = ("\n%s %s %s\n" % (frontstr, midstr, endstr))
         return neo4j_query
 
-    def query_state(self,query):
+    def execute_query(self,query):
         with self.driver.session() as session:
-            session.read_transaction(self.__query_state, query)
+            session.read_transaction(self.__execute_query, query)
 
     @staticmethod
-    def __query_state(tx, query):
+    def __execute_query(tx, query):
         result = tx.run(query)
         return list(result)
 
