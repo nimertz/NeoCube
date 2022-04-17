@@ -1,17 +1,21 @@
 import neo4j
 
+from PhotoCubeDatabaseInterface import PhotoCubeDB
 
-class Neo4jPhotocube:
+
+class Neo4jPC(PhotoCubeDB):
     """
     This class is used to connect to the Neo4j database and execute queries.
     """
-
     def __init__(self, driver):
         self.driver = driver
 
     def close(self):
         # Don't forget to close the driver connection when you are finished with it
         self.driver.close()
+
+    def get_name(self):
+        return "Neo4j"
 
     @staticmethod
     def __apply_filters(midstr, numdims, numtots, types, filts):
@@ -64,10 +68,10 @@ class Neo4jPhotocube:
         for i in range(numdims, 3):
             endstr += ("1 as %s, " % attrs[i])
         # apply dimensions
-        endstr, midstr = Neo4jPhotocube.__apply_dimensions(endstr, midstr,attrs, numdims, types, filts)
+        endstr, midstr = Neo4jPC.__apply_dimensions(endstr, midstr,attrs, numdims, types, filts)
 
         # apply rest of filters
-        midstr = Neo4jPhotocube.__apply_filters(midstr, numdims, numtots, types, filts)
+        midstr = Neo4jPC.__apply_filters(midstr, numdims, numtots, types, filts)
 
         endstr += "max(o).file_uri as file_uri, count(o) as cnt;"
 

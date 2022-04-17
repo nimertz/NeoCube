@@ -1,10 +1,18 @@
+from PhotoCubeDatabaseInterface import PhotoCubeDB
 
-class PostgresqlPhotocube:
+
+class PostgresqlPC(PhotoCubeDB):
+    """
+    This class is used to connect to the PostgreSQL database and execute queries.
+    """
     def __init__(self,conn):
         self.conn = conn
 
     def close(self):
         self.conn.close()
+
+    def get_name(self):
+        return "PostgreSQL"
 
     @staticmethod
     def __get_tag_by_id(cursor, tag_id):

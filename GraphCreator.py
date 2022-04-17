@@ -5,7 +5,7 @@ import seaborn as sbn
 
 logger = logging.getLogger(__name__)
 
-def create_barchart(title, results):
+def create_latency_barchart(title, results):
     # seaborn bar plot of results
     sbn.set(style="darkgrid")
 
