@@ -19,17 +19,13 @@ connection = psycopg2.connect(user="photocube",
 
 
 
-def print_state(query):
+def run_state_query(query):
     cursor = connection.cursor()
     cursor.execute(query)
 
     results = cursor.fetchall()
-    print(len(results))
-    for row in results:
-        #print("idx:%i:idy:%i:idz:%i:cnt:%i:uri:%s" % (row[0], row[1], row[2], row[4], row[3]))
-        pass
-
     cursor.close()
+    return results
 
 attrs = ["idx", "idy", "idz"]
 def get_state():
@@ -95,7 +91,7 @@ def get_state():
     endstr = endstr + (") X join cubeobjects O on X.object_id = O.id;")
     sqlstr = ("%s %s %s" % (frontstr, midstr, endstr))
     print(sqlstr)
-    print_state(sqlstr)
+    return run_state_query(sqlstr)
 
 numdims = 0
 numtots = 0
@@ -109,10 +105,24 @@ for L in sys.stdin:
     if C[0] == "G":
         start = datetime.datetime.now()
         for i in range(qs):
-            get_state()
+            res = get_state()
         end = datetime.datetime.now()
         duration = end - start
         print("C Time",((duration // datetime.timedelta(microseconds=1)) / qs) / 1000.0)
+
+        print("Row returned: %i" % len(res))
+        object_sum = 0
+        x,y,z,smallest_cnt =1,1,1,1000000
+        for row in res:
+            if row[4] < smallest_cnt:
+                x,y,z,smallest_cnt = row[0],row[1],row[2],row[4]
+            object_sum += row[4]
+            #print("idx:%i:idy:%i:idz:%i:cnt:%i:uri:%s" % (row[0], row[1], row[2], row[4], row[3]))
+            pass
+        print("Total Object count: %i" % (object_sum))
+        print("Smallest object count: x: %i, y: %i, z: %i - %i" % (x,y,z,smallest_cnt))
+
+
         numdims = 0
         numtots = 0
         readingdims = True
@@ -131,14 +141,30 @@ for L in sys.stdin:
         filts.append(node)
 
         cursor = connection.cursor()
-        query = "select * from get_level_from_parent_node(%i, %i);" % (node, hier)
-        print(query)
-        cursor.execute(query)
-
+        
+        # count objects for filter
+        node_subtree_query = "select * from get_subtree_from_parent_node(%i);" % (node)
+        cursor.execute(node_subtree_query)
+        node_subtree = cursor.fetchall()
+        tags = []
+        for row in node_subtree:
+            tags.append(row[1])
+        
+        tags = tuple(tags)
+        objects_query = "select count(distinct object_id) from objecttagrelations where tag_id in " + str(tags) + ";"
+        cursor.execute(objects_query)
+        objects = cursor.fetchone()[0]
         results = cursor.fetchall()
-        for row in results:
+
+
+        query = "select * from get_level_from_parent_node(%i, %i);" % (node, hier)
+        cursor.execute(query)
+        sublevel = cursor.fetchall()
+        object_sum = 0
+        for row in sublevel:
             print("id =", row[0], " tag_id =", row[1], " hierarchy_id =", row[2], " parentnode_id =", row[3])
             dims[numtots].append(int(row[0]))
+        print("Objects for Hierarchy H %i: %i" % (node,objects))
         cursor.close()
 
         numtots += 1
@@ -153,15 +179,23 @@ for L in sys.stdin:
 
         cursor = connection.cursor()
         query = "select * from tags where tagset_id = %i;" % (tagset)
-        print(query)
         cursor.execute(query)
+        tags_in_tagset = cursor.fetchall()
 
-        results = cursor.fetchall()
-        for row in results:
-            #print("id =", row[0], " tagtype_id =", row[1], " tagset_id =", row[2])
+        # count objects for filter
+        tags = []
+        for row in tags_in_tagset:
+            print("id =", row[0], " tagtype_id =", row[1], " tagset_id =", row[2])
+            tags.append(row[0])
             dims[numtots].append(int(row[0]))
-        cursor.close()
+        
+        tags = tuple(tags)
+        objects_query = "select count(distinct object_id) from objecttagrelations where tag_id in " + str(tags) + ";"
+        cursor.execute(objects_query)
+        objects_cnt = cursor.fetchone()[0]
+        print("Objects for Tagset S %i: %i" % (tagset,objects_cnt))
 
+        cursor.close()
         numtots += 1
         if readingdims:
             numdims = numdims + 1

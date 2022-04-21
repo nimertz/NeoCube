@@ -13,13 +13,13 @@ from neo4j import GraphDatabase
 
 driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "123"))
 
-def print_state(query):
+def run_state_query(query):
     results = session.read_transaction(query_state, query)
-    print("Records: %i" % len(results))
     if(len(results) <= 10):
         for row in results:
-            print("idx:%i:idy:%i:idz:%i:cnt:%i:uri:%s" % (row[0], row[1], row[2], row[4], row[3]))
+            print("idx:%i:idy:%i:idz:%i:cnt:%i:uri:%s" % (row['idx'], row['idy'], row['idz'], row[4], row[3]))
             #pass
+    return results
 
 attrs = ["idx", "idy", "idz"]
 def get_state():
@@ -33,7 +33,7 @@ def get_state():
         states *= len(dims[2])
     print("Total Cells: %i" % states)
 
-    frontstr = "" # add profile / explain here
+    frontstr = "" # add profile / explain here if needed
     midstr = ""
     endstr = "RETURN "
     # handle empty dimensions
@@ -49,7 +49,7 @@ def get_state():
 
     sqlstr = ("\n%s %s %s\n" % (frontstr, midstr, endstr))
     print(sqlstr)
-    print_state(sqlstr)
+    return run_state_query(sqlstr)
 
 
 def apply_filters(midstr):
@@ -96,6 +96,15 @@ def query_state(tx, query):
     result = tx.run(query)
     return list(result)
 
+def get_object_under_node(tx,node):
+    object_count_query = "MATCH (root: Node {id: %i })<-[:HAS_PARENT*]-()-[:REPRESENTS]->()<-[:TAGGED]-(o:Object) RETURN count(distinct o) as cnt;" % (node)
+    result = tx.run(object_count_query)
+    return list(result)
+
+def get_objects_with_tag(tx,tags):
+    objects_query = "MATCH (o:Object)-[:TAGGED]->(t:Tag) WHERE t.id IN %s RETURN count(distinct o) as cnt;" % (tags)
+    result = tx.run(objects_query)
+    return list(result)
 
 def get_tag_by_id(tx, tag_id):
     result = tx.run("MATCH (t:Tag {id: $tag_id}) RETURN t.name as name, labels(t)", tag_id=tag_id)
@@ -124,10 +133,24 @@ with driver.session() as session:
         if C[0] == "G":
             start = datetime.datetime.now()
             for i in range(qs):
-                get_state()
+                res = get_state()
             end = datetime.datetime.now()
             duration = end - start
             print("C Time",((duration // datetime.timedelta(microseconds=1)) / qs) / 1000.0)
+
+            print("Row returned: %i" % len(res))
+            object_sum = 0
+            x,y,z,smallest_cnt =1,1,1,1000000
+            for row in res:
+                if row[4] < smallest_cnt:
+                    x,y,z,smallest_cnt = row['idx'], row['idy'], row['idz'],row[4]
+                object_sum += row[4]
+                #print("idx:%i:idy:%i:idz:%i:cnt:%i:uri:%s" % (row[0], row[1], row[2], row[4], row[3]))
+                pass
+            print("Total Object count: %i" % (object_sum))
+            print("Smallest object count: x: %i, y: %i, z: %i - %i" % (x,y,z,smallest_cnt))
+
+
             numdims = 0
             numtots = 0
             readingdims = True
@@ -145,11 +168,15 @@ with driver.session() as session:
             types.append("H")
             filts.append(node)
 
-            results = session.read_transaction(get_level_from_parent_node, node, hier)
+            sublevel = session.read_transaction(get_level_from_parent_node, node, hier)
 
-            for row in results:
+            for row in sublevel:
                 print("id =", row[0], " tag_id =", row[1], " hierarchy_id =", row[2], " parentnode_id =", row[3])
                 dims[numtots].append(int(row[0]))
+
+            # count objects for filter
+            objects = session.read_transaction(get_object_under_node, node)
+            print("Objects for hierarchy H %i: %i" % (node,objects[0]['cnt']))
 
             numtots += 1
             if readingdims:
@@ -161,12 +188,19 @@ with driver.session() as session:
             types.append("S")
             filts.append(tagset)
 
-            results = session.read_transaction(get_tags_in_tagset, tagset)
+            tagset_tags = session.read_transaction(get_tags_in_tagset, tagset)
             #print(results)
 
-            for row in results:
+            # count objects for filter
+            tags = []
+            for row in tagset_tags:
                 print("id =", row[0], "tagname =", row[1], " tagtype_id =", row[2], " tagset_id =", row[3])
+                tags.append(row[0])
                 dims[numtots].append(int(row[0]))
+            
+            objects_query = "MATCH (o:Object)-[:TAGGED]->(t:Tag) WHERE t.id IN %s RETURN count(distinct o) as cnt;" % (tagset_tags)
+            objects = session.read_transaction(get_objects_with_tag, tags)
+            print("Objects for Tagset S %i: %i" % (tagset,objects[0]['cnt']))
 
             numtots += 1
             if readingdims:
