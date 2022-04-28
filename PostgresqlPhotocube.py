@@ -156,5 +156,95 @@ class PostgresqlPC(PhotoCubeDB):
     def create_materialized_indexes(self):
         with self.conn.cursor() as cursor:
             self.__create_materialized_indexes(cursor)
+
+    @staticmethod
+    def __insert_object(cursor,id,file_uri,file_type, thumbnail_uri):
+        cursor.execute("INSERT INTO cubeobjects (id, file_uri, file_type, thumbnail_uri) VALUES (%s, %s, %s, %s);", (id, file_uri, file_type, thumbnail_uri))
+
+    def insert_object(self, id, file_uri, file_type, thumbnail_uri):
+        with self.conn.cursor() as cursor:
+            self.__insert_object(cursor, id, file_uri, file_type, thumbnail_uri)
+
+    @staticmethod 
+    def __insert_tag(cursor,id,name, tagtype_id, tagset_id):
+        cursor.execute("INSERT INTO tags (id, tagtype_id, tagset_id) VALUES (%s, %s, %s);", (id, tagtype_id, tagset_id))
+        cursor.execute("INSERT INTO alphanumerical_tags (id,name,tagset_id) VALUES (%s, %s, %s);", (id, name, tagset_id))
+
+    def insert_tag(self, id, name, tagtype_id, tagset_id):
+        with self.conn.cursor() as cursor:
+            self.__insert_tag(cursor, id, name, tagtype_id, tagset_id)
+
+    @staticmethod
+    def __insert_tagset(cursor,id,name):
+        cursor.execute("INSERT INTO tagsets (id, name, tagtype_id) VALUES (%s, %s, %s);", (id, name))
     
+    def insert_tagset(self, id, name):
+        with self.conn.cursor() as cursor:
+            self.__insert_tagset(cursor, id, name)
     
+    @staticmethod
+    def __insert_node(cursor,id,tag_id,hierarchy_id):
+        cursor.execute("INSERT INTO nodes (id, tag_id, hierarchy_id) VALUES (%s, %s, %s);", (id, tag_id, hierarchy_id))
+    
+    def insert_node(self, id, tag_id, hierarchy_id):
+        with self.conn.cursor() as cursor:
+            self.__insert_node(cursor, id, tag_id, hierarchy_id)
+
+    @staticmethod
+    def __tag_object(cursor,object_id,tag_id):
+        cursor.execute("INSERT INTO objecttagrelations (object_id, tag_id) VALUES (%s, %s);", (object_id, tag_id))
+    
+    def tag_object(self, object_id, tag_id):
+        with self.conn.cursor() as cursor:
+            self.__tag_object(cursor, object_id, tag_id)
+    
+    @staticmethod
+    def __update_object(cursor,id,file_uri,file_type, thumbnail_uri):
+        cursor.execute("UPDATE cubeobjects SET file_uri = %s, file_type = %s, thumbnail_uri = %s WHERE id = %s;", (file_uri, file_type, thumbnail_uri, id))
+
+    def update_object(self, id, file_uri, file_type, thumbnail_uri):
+        with self.conn.cursor() as cursor:
+            self.__update_object(cursor, id, file_uri, file_type, thumbnail_uri)
+
+    @staticmethod
+    def __update_tag(cursor,id,name, tagtype_id, tagset_id):
+        cursor.execute("UPDATE tags SET name = %s, tagtype_id = %s, tagset_id = %s WHERE id = %s;", (name, tagtype_id, tagset_id, id))
+
+    def update_tag(self, id, name, tagtype_id, tagset_id):
+        with self.conn.cursor() as cursor:
+            self.__update_tag(cursor, id, name, tagtype_id, tagset_id)
+
+    def set_autocommit(self, autocommit):
+        self.conn.autocommit = autocommit
+    
+    def rollback(self):
+        self.conn.rollback()
+
+    @staticmethod
+    def __refresh_all_views(cursor):
+        cursor.execute("REFRESH MATERIALIZED VIEW tagsets_taggings;")
+        cursor.execute("REFRESH MATERIALIZED VIEW nodes_taggings;")
+        cursor.execute("REFRESH MATERIALIZED VIEW flattened_hierarchies;")
+
+    def refresh_all_views(self):
+        with self.conn.cursor() as cursor:
+            self.__refresh_all_views(cursor)
+
+    @staticmethod
+    def __refresh_object_views(cursor):
+        cursor.execute("REFRESH MATERIALIZED VIEW tagsets_taggings;")
+        cursor.execute("REFRESH MATERIALIZED VIEW nodes_taggings;")
+
+    def refresh_object_views(self):
+        with self.conn.cursor() as cursor:
+            self.__refresh_object_views(cursor)
+
+    @staticmethod
+    def __get_node_tag_subtree(cursor,node_id):
+        cursor.execute("SELECT * FROM get_subtree_from_parent_node(%s);", (node_id,))
+        return cursor.fetchall()
+
+    def get_node_tag_subtree(self,node_id):
+        with self.conn.cursor() as cursor:
+            return self.__get_node_tag_subtree(cursor,node_id)
+

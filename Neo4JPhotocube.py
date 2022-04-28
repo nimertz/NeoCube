@@ -102,7 +102,7 @@ class Neo4jPC(PhotoCubeDB):
 
     @staticmethod
     def __get_tags_in_tagset(tx,tagset_id):
-        result = tx.run("MATCH (t:Tag)-[:IN_TAGSET]->(ts:Tagset {id: $tagset_id}) RETURN t.id,t.name, labels(t), ts.id", tagset_id=tagset_id)
+        result = tx.run("MATCH (t:Tag)-[:IN_TAGSET]->(ts:Tagset {id: $tagset_id}) RETURN t.id, labels(t)", tagset_id=tagset_id)
         return list(result)
 
     def get_level_from_parent_node(self,node_id,hierarchy_id):
@@ -127,3 +127,29 @@ class Neo4jPC(PhotoCubeDB):
             "MATCH (n)-[:REPRESENTS]->(t:Tag) "
             "RETURN n.id, t.id, h.id, root.id", node_id=node_id)
         return list(result)
+
+    @staticmethod
+    def __insert_object(tx, id, file_uri, file_type, thumbnail_uri):
+        tx.run("CREATE (o:Object:Benchmark {id: $id, file_uri: $file_uri, file_type: $file_type, thumbnail_uri: $thumbnail_uri})",
+               id=id, file_uri=file_uri, file_type=file_type, thumbnail_uri=thumbnail_uri)
+
+    def insert_object(self, id, file_uri, file_type, thumbnail_uri):
+        with self.driver.session() as session:
+            session.write_transaction(self.__insert_object, id, file_uri, file_type, thumbnail_uri)
+
+    @staticmethod
+    def __insert_tag(tx, id, name, tagtype_id, tagset_id):
+        tx.run("CREATE (t:Tag:Benchmark {id: $id, name: $name, tagtype_id: $tagtype_id, tagset_id: $tagset_id})",
+               id=id, name=name, tagtype_id=tagtype_id, tagset_id=tagset_id)
+
+    def insert_tag(self, id, name, tagtype_id, tagset_id):
+        with self.driver.session() as session:
+            session.write_transaction(self.__insert_tag, id, name, tagtype_id, tagset_id)
+
+    @staticmethod
+    def __delete_all_benchmark_data(tx):
+        tx.run("MATCH (n:Benchmark) DETACH DELETE n")
+
+    def delete_all_benchmark_data(self):
+        with self.driver.session() as session:
+            session.write_transaction(self.__delete_all_benchmark_data)
