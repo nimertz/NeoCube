@@ -95,11 +95,11 @@ class PostgresqlPC(PhotoCubeDB):
             elif types[i] == "H":
                 if baseline:
                     midstr = midstr + (
-                                "select N.object_id, N.node_id as id from (SELECT h.parentnode_id, h.node_id, h.tag_id, o.object_id FROM (SELECT n.parentnode_id, n.id AS node_id, (get_subtree_from_parent_node(n.id)).tag_id AS tag_id FROM nodes n) h JOIN objecttagrelations o ON o.tag_id = h.tag_id) N where N.parentnode_id = %i) R%i " % (
+                                "select N.object_id, N.node_id as id from (SELECT h.parentnode_id, h.node_id, h.tag_id, o.object_id FROM (SELECT n.parentnode_id, n.id AS node_id, (get_subtree_from_parent_node(n.id)).tag_id AS tag_id FROM nodes n) h JOIN objecttagrelations o ON o.tag_id = h.tag_id) N where N.node_id = %i) R%i " % (
                         filts[i], i + 1))
                 else:
                     midstr = midstr + (
-                                "select N.object_id, N.node_id as id from nodes_taggings N where N.parentnode_id = %i) R%i " % (
+                                "select N.object_id, N.node_id as id from nodes_taggings N where N.node_id = %i) R%i " % (
                         filts[i], i + 1))
             elif types[i] == "T":
                 midstr = midstr + ("select R.object_id from objecttagrelations R where R.tag_id = %i) R%i " % (

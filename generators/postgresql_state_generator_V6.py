@@ -66,7 +66,7 @@ def get_state():
         if (types[i] == "S"):
             midstr = midstr + ("select T.object_id, T.tag_id as id from tagsets_taggings T where T.tagset_id = %i) R%i " % (filts[i], i+1))
         elif (types[i] == "H"):
-            midstr = midstr + ("select N.object_id, N.node_id as id from nodes_taggings N where N.parentnode_id = %i) R%i " % (filts[i], i+1))
+            midstr = midstr + ("select N.object_id, N.node_id as id from nodes_taggings N where N.node_id = %i) R%i " % (filts[i], i+1))
         elif (types[i] == "T"):
             midstr = midstr + ("select R.object_id from objecttagrelations R where R.tag_id = %i) R%i " % (filts[i], i+1))
         elif types[i] == "M":
