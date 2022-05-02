@@ -55,6 +55,8 @@ def benchmark():
 @benchmark.command("complete")
 @click.option("--r", default=10, help="Number of repetitions")
 def standard_latency_benchmark(r):
+    """Standard benchmarking suite for all comparisons.
+    Runs all postgreSQL & Neo4J photocube queries comparisons. Random ids used are the same for both databases to ensure fair comparison."""
     logger.info("Running standard latency benchmark with " + str(r) + " repetitions")
     results = {'query': [], 'latency': [], 'category': []}
 
@@ -66,11 +68,11 @@ def standard_latency_benchmark(r):
 
     BenchmarkHarness.comp_random_state_benchmark(psql,neo, r, results)
 
-    BenchmarkHarness.insert_object_benchmark(psql,psql.get_name(),r,results)
-    BenchmarkHarness.insert_object_benchmark(neo,neo.get_name(),r,results)
+    #BenchmarkHarness.insert_object_benchmark(psql,psql.get_name(),r,results)
+    #BenchmarkHarness.insert_object_benchmark(neo,neo.get_name(),r,results)
 
-    BenchmarkHarness.insert_tag_benchmark(psql,psql.get_name(),r,results)
-    BenchmarkHarness.insert_tag_benchmark(neo,neo.get_name(),r,results)
+    #BenchmarkHarness.insert_tag_benchmark(psql,psql.get_name(),r,results)
+    #BenchmarkHarness.insert_tag_benchmark(neo,neo.get_name(),r,results)
 
     title = "Latency of Photocube queries of Neo4j and Postgresql" + "\n" + "Query repetitions: %i " % r
     create_latency_barchart(title, results)
@@ -79,8 +81,9 @@ def standard_latency_benchmark(r):
     psql.close()
 
 @benchmark.command(name="state")
-@click.option("--r", default=10, help="Number of query repetitions")
-def state_scenarios_and_progression_benchmark(r):
+@click.option("--r", default=10, help="Number of repetitions")
+def state_scenarios_benchmark(r):
+    """Benchmarking suite for state scenarios."""
     logger.info("Running state scenarios benchmark with " + str(r) + " repetitions")
     results = {'query': [], 'latency': [], 'category': []}
 
@@ -94,6 +97,27 @@ def state_scenarios_and_progression_benchmark(r):
 
     title ='Photocube state latency results \n Query repetitions:' + str(r) + ''
     create_latency_barchart(title,results)
+    plt.show()
+    neo.close()
+    psql.close()
+
+
+
+@benchmark.command("write")
+@click.option("--r", default=10, help="Number of repetitions")
+def write_latency_benchmark(r):
+    """Benchmarking suite for write photocube scenarios."""
+    logger.info("Running write latency benchmark with " + str(r) + " repetitions")
+    results = {'query': [], 'latency': [], 'category': []}
+
+    BenchmarkHarness.insert_object_benchmark(psql,psql.get_name(),r,results)
+    BenchmarkHarness.insert_object_benchmark(neo,neo.get_name(),r,results)
+
+    BenchmarkHarness.insert_tag_benchmark(psql,psql.get_name(),r,results)
+    BenchmarkHarness.insert_tag_benchmark(neo,neo.get_name(),r,results)
+
+    title = "Latency of Photocube inserts of Neo4j and Postgresql" + "\n" + "Query repetitions: %i " % r
+    create_latency_barchart(title, results)
     plt.show()
     neo.close()
     psql.close()

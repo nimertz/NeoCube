@@ -25,8 +25,7 @@ class Neo4jPC(PhotoCubeDB):
                 midstr += "MATCH (fil%i_ts)<-[:IN_TAGSET]-(R%i: Tag)<-[:TAGGED]-(o: Object)\n" % (i + 1, i + 1)
             elif types[i] == "H":
                 midstr += "MATCH (fil%i_n: Node {id: %i})\n" % (i + 1, filts[i])
-                midstr += "MATCH (fil%i_n)<-[:HAS_PARENT*]-(R%i : Node)-[:REPRESENTS]->(:Tag)<-[:TAGGED]-(o: Object)\n" % (
-                i + 1, i + 1)
+                midstr += "MATCH (fil%i_n)<-[:HAS_PARENT]-(R%i : Node)<-[:HAS_PARENT*]-(: Node)-[:REPRESENTS]->(: Tag)<-[:TAGGED]-(o: Object)\n" % (i + 1, i + 1)
             elif types[i] == "T":
                 midstr += "MATCH (fil%i_t: Tag {id: %i})\n" % (i + 1, filts[i])
                 midstr += "MATCH (fil%i_t)<-[:TAGGED]-(o: Object)\n" % (i + 1)
@@ -52,8 +51,7 @@ class Neo4jPC(PhotoCubeDB):
                 midstr += "MATCH (dim%i_ts)<-[:IN_TAGSET]-(R%i: Tag)<-[:TAGGED]-(o: Object)\n" % (i + 1, i + 1)
             elif types[i] == "H":
                 midstr += "MATCH (dim%i_n: Node {id: %i})\n" % (i + 1, filts[i])
-                midstr += "MATCH (dim%i_n)<-[:HAS_PARENT*]-(R%i : Node)-[:REPRESENTS]->(:Tag)<-[:TAGGED]-(o: Object)\n" % (
-                i + 1, i + 1)
+                midstr += "MATCH (dim%i_n)<-[:HAS_PARENT]-(R%i : Node)<-[:HAS_PARENT*0..]-(: Node)-[:REPRESENTS]->(: Tag)<-[:TAGGED]-(o: Object)\n" % (i + 1, i + 1)
             #print(types[i], filts[i])
         return endstr, midstr
 
@@ -73,7 +71,7 @@ class Neo4jPC(PhotoCubeDB):
         # apply rest of filters
         midstr = Neo4jPC.__apply_filters(midstr, numdims, numtots, types, filts)
 
-        endstr += "max(o).file_uri as file_uri, count(o) as cnt;"
+        endstr += "max(o).file_uri as file_uri, count(distinct o) as cnt;"
 
         neo4j_query = ("\n%s %s %s\n" % (frontstr, midstr, endstr))
         return neo4j_query

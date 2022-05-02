@@ -45,7 +45,7 @@ def get_state():
     # apply rest of filters
     midstr = apply_filters(midstr)
 
-    endstr += "max(o).file_uri as file_uri, count(o) as cnt;"
+    endstr += "max(o).file_uri as file_uri, count(distinct o) as cnt;"
 
     sqlstr = ("\n%s %s %s\n" % (frontstr, midstr, endstr))
     print(sqlstr)
@@ -59,8 +59,7 @@ def apply_filters(midstr):
             midstr += "MATCH (fil%i_ts)<-[:IN_TAGSET]-(R%i: Tag)<-[:TAGGED]-(o: Object)\n" % (i + 1, i + 1)
         elif types[i] == "H":
             midstr += "MATCH (fil%i_n: Node {id: %i})\n" % (i + 1, filts[i])
-            midstr += "MATCH (fil%i_n)<-[:HAS_PARENT*]-(R%i : Node)-[:REPRESENTS]->(:Tag)<-[:TAGGED]-(o: Object)\n" % (
-            i + 1, i + 1)
+            midstr += "MATCH (fil%i_n)<-[:HAS_PARENT]-(R%i : Node)<-[:HAS_PARENT*]-(: Node)-[:REPRESENTS]->(: Tag)<-[:TAGGED]-(o: Object)\n" % (i + 1, i + 1)
         elif types[i] == "T":
             midstr += "MATCH (fil%i_t: Tag {id: %i})\n" % (i + 1, filts[i])
             midstr += "MATCH (fil%i_t)<-[:TAGGED]-(o: Object)\n" % (i + 1)
@@ -86,8 +85,7 @@ def apply_dimensions(endstr, midstr):
             midstr += "MATCH (dim%i_ts)<-[:IN_TAGSET]-(R%i: Tag)<-[:TAGGED]-(o: Object)\n" % (i + 1, i + 1)
         elif types[i] == "H":
             midstr += "MATCH (dim%i_n: Node {id: %i})\n" % (i + 1, filts[i])
-            midstr += "MATCH (dim%i_n)<-[:HAS_PARENT*]-(R%i : Node)-[:REPRESENTS]->(:Tag)<-[:TAGGED]-(o: Object)\n" % (
-            i + 1, i + 1)
+            midstr += "MATCH (dim%i_n)<-[:HAS_PARENT]-(R%i : Node)<-[:HAS_PARENT*0..]-(: Node)-[:REPRESENTS]->(: Tag)<-[:TAGGED]-(o: Object)\n" % (i + 1, i + 1)
         print(types[i], filts[i])
     return endstr, midstr
 
@@ -96,8 +94,8 @@ def query_state(tx, query):
     result = tx.run(query)
     return list(result)
 
-def get_object_under_node(tx,node):
-    object_count_query = "MATCH (root: Node {id: %i })<-[:HAS_PARENT*]-()-[:REPRESENTS]->()<-[:TAGGED]-(o:Object) RETURN count(distinct o) as cnt;" % (node)
+def get_object_in_node_subtree(tx,node):
+    object_count_query = "MATCH (root: Node {id: %i })<-[:HAS_PARENT*0..]-()-[:REPRESENTS]->()<-[:TAGGED]-(o:Object) RETURN count(distinct o) as cnt;" % (node)
     result = tx.run(object_count_query)
     return list(result)
 
@@ -175,7 +173,7 @@ with driver.session() as session:
                 dims[numtots].append(int(row[0]))
 
             # count objects for filter
-            objects = session.read_transaction(get_object_under_node, node)
+            objects = session.read_transaction(get_object_in_node_subtree, node)
             print("Objects for hierarchy H %i: %i" % (node,objects[0]['cnt']))
 
             numtots += 1

@@ -90,7 +90,7 @@ def get_state():
     frontstr = frontstr + ("max(R1.object_id) as object_id, count(distinct R1.object_id) as cnt ")
     endstr = endstr + (") X join cubeobjects O on X.object_id = O.id;")
     sqlstr = ("%s %s %s" % (frontstr, midstr, endstr))
-    print(sqlstr)
+    print("\n" + sqlstr + "\n")
     return run_state_query(sqlstr)
 
 numdims = 0

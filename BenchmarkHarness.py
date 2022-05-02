@@ -266,7 +266,7 @@ def three_dimensions_state(psql,category, reps, result):
     types = ["H","S","H"]
     filts = [691, 15,30]
 
-    #dog , location, day of week string
+    #dog , location name, day of week string
 
     return baseline_materialize_index_benchmark(psql,category, reps, result, numdims, numtots, types, filts)
 
