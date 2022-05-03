@@ -1,9 +1,25 @@
 import logging
 
 import numpy as np
+import pandas as pd
 import seaborn as sbn
 
 logger = logging.getLogger(__name__)
+
+logger.setLevel(logging.INFO)
+
+def create_latency_connected_scatter_plot(title, results,x_axis,x_label):
+    # seaborn scatter plot of results
+    sbn.set(style="darkgrid")
+    
+    #print(results)
+    #lineplot with markers
+    #ax = sbn.lineplot(data=results, x=x_axis, y="latency", hue="category", markers='o')
+    ax = sbn.lineplot(data=results, x=x_axis, y="latency", hue="category", style="category", markers=True)
+    
+    ax.set(xlabel=x_label, ylabel='Mean Latency (ms)', title=title)
+    logger.info("Latency scatter plot created for : " + title)
+    return ax
 
 def create_latency_barchart(title, results):
     # seaborn bar plot of results

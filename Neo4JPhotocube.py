@@ -78,7 +78,7 @@ class Neo4jPC(PhotoCubeDB):
 
     def execute_query(self,query):
         with self.driver.session() as session:
-            session.read_transaction(self.__execute_query, query)
+            return session.read_transaction(self.__execute_query, query)
 
     @staticmethod
     def __execute_query(tx, query):
@@ -87,7 +87,7 @@ class Neo4jPC(PhotoCubeDB):
 
     def get_tag_by_id(self,tag_id):
         with self.driver.session() as session:
-            session.read_transaction(self.__get_tag_by_id, tag_id)
+            return session.read_transaction(self.__get_tag_by_id, tag_id)
 
     @staticmethod
     def __get_tag_by_id(tx, tag_id):
@@ -96,7 +96,7 @@ class Neo4jPC(PhotoCubeDB):
 
     def get_tags_in_tagset(self,tagset_id):
         with self.driver.session() as session:
-            session.read_transaction(self.__get_tags_in_tagset, tagset_id)
+            return session.read_transaction(self.__get_tags_in_tagset, tagset_id)
 
     @staticmethod
     def __get_tags_in_tagset(tx,tagset_id):
@@ -105,7 +105,7 @@ class Neo4jPC(PhotoCubeDB):
 
     def get_level_from_parent_node(self,node_id,hierarchy_id):
         with self.driver.session() as session:
-            session.read_transaction(self.__get_level_from_parent_node, node_id, hierarchy_id)
+            return session.read_transaction(self.__get_level_from_parent_node, node_id, hierarchy_id)
 
     @staticmethod
     def __get_level_from_parent_node(tx,node_id,hierarchy_id):
@@ -116,7 +116,7 @@ class Neo4jPC(PhotoCubeDB):
 
     def get_node_tag_subtree(self,node_id):
         with self.driver.session() as session:
-            session.read_transaction(self.__get_node_tag_subtree, node_id)
+            return session.read_transaction(self.__get_node_tag_subtree, node_id)
 
     @staticmethod
     def __get_node_tag_subtree(tx, node_id):
