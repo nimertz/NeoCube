@@ -4,6 +4,7 @@ This is a benchmarking suite used to compare PostgreSQL and Neo4j photocube quer
 
 Dependencies:
 pip install numpy - for plotting custom barcharts
+pip install pandas - for plotting custom barcharts
 pip install click - for command line interface
 pip install seaborn - for plotting
 pip install neo4j - To install Neo4j driver 
@@ -24,7 +25,7 @@ import PostgresqlPhotocube
 import BenchmarkHarness
 
 # Creating and Configuring Logger
-from GraphCreator import create_latency_barchart, create_latency_connected_scatter_plot
+from GraphCreator import create_latency_barchart, create_latency_connected_scatter_plot, create_cbmi_latency_barchart
 
 LOG_FORMAT = "%(levelname)s %(asctime)s - %(message)s"
 
@@ -97,7 +98,7 @@ def state_scenarios_benchmark(r, neo4j,comp):
 
         BenchmarkHarness.comp_2d_state_benchmark(psql,neo,"2D",r,results,incl_baseline=True)
         BenchmarkHarness.comp_3d_state_benchmark(psql,neo,"3D",r,results,incl_baseline=True)
-        BenchmarkHarness.comp_3d_2f_state_benchmark(psql,neo,"3D + 2F",r,results,incl_baseline=True)
+        BenchmarkHarness.comp_3d_2f_state_benchmark(psql,neo,"3D + 2",r,results,incl_baseline=True)
     elif neo4j:
         logger.info("Using Neo4j as database for state scenarios")
         #BenchmarkHarness.lifelog_task_state_benchmark(neo,"Lifelog Task", r, results,neo4j)
@@ -107,7 +108,7 @@ def state_scenarios_benchmark(r, neo4j,comp):
 
         BenchmarkHarness.two_dimensions_state(neo,"2D", r, results,neo4j)
         BenchmarkHarness.three_dimensions_state(neo,"3D", r, results, neo4j)
-        BenchmarkHarness.three_two_filters_dimensions_state(neo,"3D + 2 filters", r, results, neo4j)
+        BenchmarkHarness.three_two_filters_dimensions_state(neo,"3D + 2", r, results, neo4j)
     else:
         #BenchmarkHarness.lifelog_task_state_benchmark(psql,"Lifelog Task", r, results)
         #BenchmarkHarness.simple_state_benchmark(psql,"Simple", r, results)
@@ -116,13 +117,31 @@ def state_scenarios_benchmark(r, neo4j,comp):
 
         BenchmarkHarness.two_dimensions_state(psql,"2D", r, results)
         BenchmarkHarness.three_dimensions_state(psql,"3D", r, results)
-        BenchmarkHarness.three_two_filters_dimensions_state(psql,"3D + 2 filters", r, results)
+        BenchmarkHarness.three_two_filters_dimensions_state(psql,"3D + 2", r, results)
 
     title ='Photocube state latency results \n Query repetitions:' + str(r) + ''
     create_latency_barchart(title,results)
     plt.show()
     neo.close()
     psql.close()
+
+@benchmark.command(name="cbmi")
+@click.option("--r", default=10, help="Number of query repetitions")
+def state_scenarios_benchmark(r):
+    """Benchmarking suite for different state scenarios."""
+    logger.info("Running CBMI state scenarios benchmark with " + str(r) + " repetitions")
+    results = {'query': [], 'latency': [], 'category': []}
+
+    BenchmarkHarness.two_dimensions_state(psql,"2D", r, results)
+    BenchmarkHarness.three_dimensions_state(psql,"3D", r, results)
+    BenchmarkHarness.three_two_filters_dimensions_state(psql,"3D + 2", r, results)
+
+    create_cbmi_latency_barchart(results)
+    
+    plt.show()
+    neo.close()
+    psql.close()
+
 
 @benchmark.command("write")
 @click.option("--r", default=10, help="Number of query repetitions")
@@ -152,8 +171,24 @@ def write_latency_benchmark(r):
 
     BenchmarkHarness.cell_number_state_benchmark(psql,neo,r,results)
 
-    title = "Latency of Photocube Neo4j and Postgresql state queries in relation to amount of cells returned" + "\n" + "Query samples per database: %i " % r
+    title = "Latency of random Photocube Neo4j and Postgresql state queries in relation to amount of cells returned" + "\n" + "Query samples per database: %i " % r
     create_latency_connected_scatter_plot(title,results,"cells", "# Cells")
+
+    plt.show()
+    neo.close()
+    psql.close()
+
+@benchmark.command("cnt_sum")
+@click.option("--r", default=10, help="Number of query repetitions")
+def write_latency_benchmark(r):
+    """Connected scatterplot of latency for different amount of cells returned in state queries."""
+    logger.info("Running object count effect benchmark with " + str(r) + " repetitions")
+    results = {'total_cnt': [], 'latency': [], 'category': []}
+
+    BenchmarkHarness.object_count_state_benchmark(psql,neo,r,results)
+
+    title = "Latency of random Photocube Neo4j and Postgresql state queries in relation to object count sum" + "\n" + "Query samples per database: %i " % r
+    create_latency_connected_scatter_plot(title,results,"total_cnt", "Object count sum")
 
     plt.show()
     neo.close()

@@ -89,28 +89,59 @@ def cell_number_state_benchmark(db1 : PhotoCubeDB, db2 : PhotoCubeDB, reps, resu
         numtots = 3
         types, filts = __get_random_dimensions(type_options, S_filter_max, H_filter_max, numdims)
 
-        start = datetime.datetime.now()
-        rows1 = db1.execute_query(db1.gen_state_query(numdims, numtots, types, filts))
-        end = datetime.datetime.now()
-        duration = end - start
-        time1 = duration.total_seconds() * 1e3
-        if time1 > 2000:
-            logger.warning(db1.get_name() + " state query time: " + str(round(time1, 2)) + " ms" +
-                  " parameters: " + str(types) + " " + str(filts))
-        
-        start = datetime.datetime.now()
-        rows2 = db2.execute_query(db2.gen_state_query(numdims, numtots, types, filts))
-        end = datetime.datetime.now()
-        duration = end - start
-        time2 = duration.total_seconds() * 1e3
-        if time2 > 2000:
-            logger.warning(db2.get_name() + " state query time: " + str(round(time2, 2)) + " ms" +
-                  " parameters: " + str(types) + " " + str(filts))
+        rows1, time1, rows2, time2 = __time_dbs_state_query(db1, db2, numdims, numtots, types, filts)
 
         __append_metric_results("cells", len(rows1), time1, db1.get_name(), result)
         __append_metric_results("cells", len(rows2), time2, db2.get_name(), result)
         
     return result
+
+def object_count_state_benchmark(db1 : PhotoCubeDB, db2 : PhotoCubeDB, reps, result):
+    logger.info("Running object count number effect of state query for " + db1.get_name() + " & " + db2.get_name() + " benchmark with " + str(reps) + " reps")
+    
+    type_options = ["S", "H"]
+    S_filter_max = MAX_TAGSET_ID
+    H_filter_max = MAX_NODE_ID
+    for _ in range(reps):
+        numdims = 3
+        numtots = 3
+        types, filts = __get_random_dimensions(type_options, S_filter_max, H_filter_max, numdims)
+
+        rows1, time1, rows2, time2 = __time_dbs_state_query(db1, db2, numdims, numtots, types, filts)
+
+        __append_metric_results("total_cnt", __sum_state_cnt(rows1), time1, db1.get_name(), result)
+        __append_metric_results("total_cnt", __sum_state_cnt(rows2), time2, db2.get_name(), result)
+        
+    return result
+
+def __time_dbs_state_query(db1, db2, numdims, numtots, types, filts):
+    start = datetime.datetime.now()
+    rows1 = db1.execute_query(db1.gen_state_query(numdims, numtots, types, filts))
+    end = datetime.datetime.now()
+    duration = end - start
+    time1 = duration.total_seconds() * 1e3
+    if time1 > 2000:
+        logger.warning(db1.get_name() + " state query time: " + str(round(time1, 2)) + " ms" +
+                  " parameters: " + str(types) + " " + str(filts))
+        
+    start = datetime.datetime.now()
+    rows2 = db2.execute_query(db2.gen_state_query(numdims, numtots, types, filts))
+    end = datetime.datetime.now()
+    duration = end - start
+    time2 = duration.total_seconds() * 1e3
+    if time2 > 2000:
+        logger.warning(db2.get_name() + " state query time: " + str(round(time2, 2)) + " ms" +
+                  " parameters: " + str(types) + " " + str(filts))
+              
+    return rows1,time1,rows2,time2
+
+def __sum_state_cnt(rows):
+    cnt_sum = 0
+    for row in rows:
+        cnt_sum += row[4]
+    return cnt_sum
+
+
     
 
 def state_benchmark(db : PhotoCubeDB, result, numdims, numtots, types, filts, category, query_name="State"):
@@ -193,19 +224,19 @@ def __psql_baseline_materialize_index_benchmark(psql : PostgresqlPC, category, r
     benchmark_string_query(psql, reps, materialized_view_query, "Indexed Views", category, result)
     return result
 
-def lifelog_task_state_benchmark(psql,category, reps, result, neo = False):
+def lifelog_task_state_benchmark(db,category, reps, result, neo = False):
     numdims, numtots, types, filts = __get_lifelog_state_params()
 
     if neo:
-        return state_benchmark(psql, result, numdims, numtots, types, filts, psql.get_name(),"Lifelog task state")
-    return __psql_baseline_materialize_index_benchmark(psql,category, reps, result, numdims, numtots, types, filts)
+        return state_benchmark(db, result, numdims, numtots, types, filts, db.get_name(),"Lifelog task state")
+    return __psql_baseline_materialize_index_benchmark(db,category, reps, result, numdims, numtots, types, filts)
 
-def simple_state_benchmark(psql,category, reps, result, neo = False):
+def simple_state_benchmark(db,category, reps, result, neo = False):
     numdims, numtots, types, filts = __get_simple_state_params()
 
     if neo:
-        return state_benchmark(psql, result, numdims, numtots, types, filts, psql.get_name(), "Simple state")
-    return __psql_baseline_materialize_index_benchmark(psql,category, reps, result, numdims, numtots, types, filts)
+        return state_benchmark(db, result, numdims, numtots, types, filts, db.get_name(), "Simple state")
+    return __psql_baseline_materialize_index_benchmark(db,category, reps, result, numdims, numtots, types, filts)
 
 def __comp_state_benchmark(db1, db2, category, reps, result, numdims, numtots, types, filts, baseline=False):
     if(baseline):
@@ -217,42 +248,42 @@ def __comp_state_benchmark(db1, db2, category, reps, result, numdims, numtots, t
     state_benchmark(db2, result, numdims, numtots, types, filts, category, db2.get_name() + " state")
     return result
 
-def medium_state_benchmark(psql, category, reps, result, neo = False):
+def medium_state_benchmark(db, category, reps, result, neo = False):
     numdims, numtots, types, filts = __get_medium_state_params()
 
     if neo:
-        return state_benchmark(psql, result, numdims, numtots, types, filts, psql.get_name(), "Medium state")
-    return __psql_baseline_materialize_index_benchmark(psql,category, reps, result, numdims, numtots, types, filts)
+        return state_benchmark(db, result, numdims, numtots, types, filts, db.get_name(), "Medium state")
+    return __psql_baseline_materialize_index_benchmark(db,category, reps, result, numdims, numtots, types, filts)
 
-def complex_state_benchmark(psql,category, reps, result, neo = False):
+def complex_state_benchmark(db,category, reps, result, neo = False):
     numdims, numtots, types, filts = __get_complex_state_params()
 
     if neo:
-        return state_benchmark(psql, result, numdims, numtots, types, filts,psql.get_name(), "Complex state")
-    return __psql_baseline_materialize_index_benchmark(psql,category, reps, result, numdims, numtots, types, filts)
+        return state_benchmark(db, result, numdims, numtots, types, filts,db.get_name(), "Complex state")
+    return __psql_baseline_materialize_index_benchmark(db,category, reps, result, numdims, numtots, types, filts)
 
-def two_dimensions_state(psql,category, reps, result, neo = False):
+def two_dimensions_state(db,category, reps, result, neo = False):
     numdims, numtots, types, filts = __get_2d_state_params()
     
     if neo:
-        return state_benchmark(psql, result, numdims, numtots, types, filts,psql.get_name(), "2D state")
+        return state_benchmark(db, result, numdims, numtots, types, filts,db.get_name(), "2D state")
 
-    return __psql_baseline_materialize_index_benchmark(psql,category, reps, result, numdims, numtots, types, filts)
+    return __psql_baseline_materialize_index_benchmark(db,category, reps, result, numdims, numtots, types, filts)
 
 
-def three_dimensions_state(psql,category, reps, result, neo = False):
+def three_dimensions_state(db,category, reps, result, neo = False):
     numdims, numtots, types, filts = __get_3d_state_params()
 
     if neo:
-        return state_benchmark(psql, result, numdims, numtots, types, filts,psql.get_name(), "3D state")
-    return __psql_baseline_materialize_index_benchmark(psql,category, reps, result, numdims, numtots, types, filts)
+        return state_benchmark(db, result, numdims, numtots, types, filts,db.get_name(), "3D state")
+    return __psql_baseline_materialize_index_benchmark(db,category, reps, result, numdims, numtots, types, filts)
 
-def three_two_filters_dimensions_state(psql,category, reps, result, neo = False):
+def three_two_filters_dimensions_state(db,category, reps, result, neo = False):
     numdims, numtots, types, filts = __get_3d_2f_state_params()
 
     if neo:
-        return state_benchmark(psql, result, numdims, numtots, types, filts,psql.get_name(), "3D state + 2 filters")
-    return __psql_baseline_materialize_index_benchmark(psql,category, reps, result, numdims, numtots, types, filts)
+        return state_benchmark(db, result, numdims, numtots, types, filts,db.get_name(), "3D state + 2 filters")
+    return __psql_baseline_materialize_index_benchmark(db,category, reps, result, numdims, numtots, types, filts)
 
 def simple_state_comp_benchmark(db1 : PhotoCubeDB, db2 : PhotoCubeDB, category, reps, result,incl_baseline=False):
     numdims, numtots, types, filts = __get_simple_state_params()
@@ -330,6 +361,7 @@ def __get_complex_state_params():
 
 def __get_2d_state_params():
     #dog , year
+    # 46, 183288
     numdims = 2
     numtots = 2
     types = ["H", "S"]
@@ -338,6 +370,7 @@ def __get_2d_state_params():
 
 def __get_3d_state_params():
     #dog , location name, day of week string
+    # 46, 127192, 183288
     numdims = 3
     numtots = 3
     types = ["H","S","H"]
@@ -346,6 +379,7 @@ def __get_3d_state_params():
 
 def __get_3d_2f_state_params():
     # location, day of week string, year, dog, september
+    # 127192, 183288, 183288, 46, 
     numdims = 3
     numtots = 5
     types = ["S","H","S","H","T"]
