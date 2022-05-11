@@ -25,7 +25,7 @@ class Neo4jPC(PhotoCubeDB):
             elif types[i] == "H":
                 midstr += "MATCH (fil%i_n: Node {id: %i})\n" % (i + 1, filts[i])
                 midstr += "MATCH (fil%i_n)<-[:HAS_PARENT]-(R%i : Node)<-[:HAS_PARENT*]-(: Node)-[:REPRESENTS]->(: Tag)<-[:TAGGED]-(o: Object)\n" % (
-                i + 1, i + 1)
+                    i + 1, i + 1)
             elif types[i] == "T":
                 midstr += "MATCH (fil%i_t: Tag {id: %i})\n" % (i + 1, filts[i])
                 midstr += "MATCH (fil%i_t)<-[:TAGGED]-(o: Object)\n" % (i + 1)
@@ -52,7 +52,7 @@ class Neo4jPC(PhotoCubeDB):
             elif types[i] == "H":
                 midstr += "MATCH (dim%i_n: Node {id: %i})\n" % (i + 1, filts[i])
                 midstr += "MATCH (dim%i_n)<-[:HAS_PARENT]-(R%i : Node)<-[:HAS_PARENT*0..]-(: Node)-[:REPRESENTS]->(: Tag)<-[:TAGGED]-(o: Object)\n" % (
-                i + 1, i + 1)
+                    i + 1, i + 1)
             # print(types[i], filts[i])
         return endstr, midstr
 
@@ -74,8 +74,52 @@ class Neo4jPC(PhotoCubeDB):
 
         endstr += "max(o).file_uri as file_uri, count(distinct o) as cnt;"
 
-        neo4j_query = ("\n%s %s %s\n" % (frontstr, midstr, endstr))
-        return neo4j_query
+        neo4j_state_query = ("\n%s %s %s\n" % (frontstr, midstr, endstr))
+        return neo4j_state_query
+
+    @staticmethod
+    def gen_cell_query(numdims, numtots, types, filts):
+        if numdims == 0:
+            return "MATCH(o: Object) RETURN o.id as Id, o.file_uri as fileURI;"
+
+        frontstr = ""  # add profile / explain here
+        midstr = ""
+        endstr = "MATCH (o)-[:TAGGED]->(ts :Tag:Timestamp) " \
+                 "RETURN DISTINCT o.id as id, o.file_uri as fileURI, ts.name as T " \
+                 "ORDER BY ts.name;"
+
+        for i in range(numdims):
+            if types[i] == "T":
+                midstr += "MATCH (dim%i_t: Tag {id: %i})\n" % (i + 1, filts[i])
+                midstr += "MATCH (dim%i_t: Tag)<-[:TAGGED]-(o: Object)\n" % (i + 1)
+            elif types[i] == "H":
+                midstr += "MATCH (dim%i_n: Node {id: %i})\n" % (i + 1, filts[i])
+                midstr += "MATCH (dim%i_n)<-[:HAS_PARENT]-(R%i : Node)<-[:HAS_PARENT*0..]-(: Node)-[:REPRESENTS]->(: Tag)<-[:TAGGED]-(o: Object)\n" % (
+                    i + 1, i + 1)
+
+        for i in range(numdims, numtots):
+            if types[i] == "H":
+                midstr += "MATCH (fil%i_n: Node {id: %i})\n" % (i + 1, filts[i])
+                midstr += "MATCH (fil%i_n)<-[:HAS_PARENT]-(R%i : Node)<-[:HAS_PARENT*]-(: Node)-[:REPRESENTS]->(: Tag)<-[:TAGGED]-(o: Object)\n" % (
+                    i + 1, i + 1)
+            elif types[i] == "T":
+                midstr += "MATCH (fil%i_t: Tag {id: %i})\n" % (i + 1, filts[i])
+                midstr += "MATCH (fil%i_t)<-[:TAGGED]-(o: Object)\n" % (i + 1)
+            elif types[i] == "S":
+                midstr += "MATCH (fil%i_t: Tagset {id: %i})\n" % (i + 1, filts[i])
+                midstr += "MATCH (fil%i_t)<-[:IN_TAGSET]-(:Tag)<-[:TAGGED]-(o: Object)\n" % (i + 1)
+            elif types[i] == "M":
+                midstr += "MATCH (m_fil%i_t: Tag) WHERE m_fil%i_t.id IN [" % (i + 1, i + 1)
+                for j in range(len(filts[i])):
+                    if j == 0:
+                        midstr += "%i" % (filts[i][j])
+                    else:
+                        midstr += ",%i" % (filts[i][j])
+                midstr += "]\n"
+                midstr += "MATCH (m_fil%i_t)<-[:TAGGED]-(o: Object)\n" % (i + 1)
+
+        neo4j_cell_query = ("\n%s %s %s\n" % (frontstr, midstr, endstr))
+        return neo4j_cell_query
 
     def execute_query(self, query):
         with self.driver.session() as session:

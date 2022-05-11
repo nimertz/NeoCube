@@ -27,6 +27,7 @@ def create_latency_scatter_plot(title, results, x_axis, x_label):
 def create_latency_barchart(title, results):
     # seaborn bar plot of results
     sbn.set(style="darkgrid")
+    sbn.set_context("poster")
 
     ax = sbn.barplot(x="query", y="latency", hue="category", data=results, log=True, palette="Set2", capsize=.05,
                      errcolor='gray')

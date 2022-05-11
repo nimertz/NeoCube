@@ -15,13 +15,17 @@ class PhotoCubeDB:
         """Get all tags in a tagset"""
         pass
 
+    def gen_cell_query(self, numdims, numtots, types, filts):
+        """Get a cell (objects associated with tag/node filters)"""
+        pass
+
     def execute_query(self, query):
-        """Execute a query from string"""
+        """Execute a query from string - readonly"""
         pass
 
     @staticmethod
     def gen_state_query(numdims, numtots, types, filts):
-        """Generate a query for the state of the cube"""
+        """Generate a querystring for the state of the cube"""
         pass
 
     def get_level_from_parent_node(self, node_id, hierarchy_id):
@@ -91,3 +95,5 @@ class PhotoCubeDB:
     def delete_all_benchmark_data(self):
         """Delete all benchmark data from the database"""
         pass
+
+

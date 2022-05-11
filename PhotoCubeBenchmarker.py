@@ -4,7 +4,6 @@ This is a benchmarking suite used to compare PostgreSQL and Neo4j photocube quer
 
 Dependencies:
 pip install numpy - for plotting custom barcharts
-pip install pandas - for plotting custom barcharts
 pip install click - for command line interface
 pip install seaborn - for plotting
 pip install neo4j - To install Neo4j driver 
@@ -71,6 +70,7 @@ def standard_latency_benchmark(r, w):
     BenchmarkHarness.comp_bench_rand_id("Node tag subtree", psql.get_name(), neo.get_name(), psql.get_node_tag_subtree,
                                         neo.get_node_tag_subtree, r, MAX_NODE_ID, results)
     BenchmarkHarness.comp_random_state_benchmark(psql, neo, r, results)
+    BenchmarkHarness.comp_random_cell_benchmark(psql, neo, r, results)
 
     if w:
         BenchmarkHarness.insert_object_benchmark(psql, psql.get_name(), r, results)
@@ -79,7 +79,7 @@ def standard_latency_benchmark(r, w):
         BenchmarkHarness.insert_tag_benchmark(psql, psql.get_name(), r, results)
         BenchmarkHarness.insert_tag_benchmark(neo, neo.get_name(), r, results)
 
-    title = "Latency of Photocube queries of Neo4j and Postgresql" + "\n" + "Query repetitions: %i " % r
+    title = "Latency of random Photocube queries of Neo4j and Postgresql" + "\n" + "Query repetitions: %i " % r
     create_latency_barchart(title, results)
     plt.show()
     neo.close()

@@ -49,27 +49,39 @@ class PostgresqlPC(PhotoCubeDB):
         frontstr = "select X.idx, X.idy, X.idz, O.file_uri, X.cnt from (select "
         midstr = "from ("
         endstr = "group by "
-        for i in range(numdims):
-            frontstr = frontstr + ("R%i.id as %s, " % (i + 1, attrs[i]))
 
-            if types[i] == "S":
-                if baseline:
-                    midstr = midstr + (
-                            "select T.object_id, T.tag_id as id from (SELECT t.tagset_id, r.tag_id, r.object_id FROM tags t JOIN objecttagrelations r ON r.tag_id = t.id) T where T.tagset_id = %i) R%i " % (
-                        filts[i], i + 1))
-                else:
-                    midstr = midstr + (
-                            "select T.object_id, T.tag_id as id from tagsets_taggings T where T.tagset_id = %i) R%i " % (
-                        filts[i], i + 1))
+        endstr, frontstr, midstr = PostgresqlPC.__apply_dimensions(attrs, baseline, endstr, filts, frontstr, midstr,
+                                                                   numdims, numtots, types)
+
+        midstr = PostgresqlPC.__apply_filters(baseline, filts, midstr, numdims, numtots, types)
+
+        for i in range(numdims, 3):
+            frontstr = frontstr + ("1 as %s, " % attrs[i])
+
+        frontstr = frontstr + ("max(R1.object_id) as object_id, count(distinct R1.object_id) as cnt ")
+        endstr = endstr + (") X join cubeobjects O on X.object_id = O.id;")
+        sqlstr = ("%s %s %s" % (frontstr, midstr, endstr))
+
+        return sqlstr
+
+    @staticmethod
+    def gen_cell_query(numdims, numtots, types, filts):
+        if numtots == 0:
+            return "select O.id as Id, O.file_uri as fileURI from cubeobjects O;"
+
+        frontstr = "select distinct O.id as Id, O.file_uri as fileURI, TS.name as T from (select R1.object_id "
+        midstr = " from ("
+        endstr = ") X join cubeobjects O on X.object_id = O.id join objecttagrelations R2 on O.id = R2.object_id join timestamp_tags TS on R2.tag_id = TS.id order by TS.name;"
+
+        for i in range(numdims):
+            if types[i] == "T":
+                midstr = midstr + (
+                        " select R.object_id from objecttagrelations R where R.tag_id = %i) R%i " % (
+                    filts[i], i + 1))
             elif types[i] == "H":
-                if baseline:
-                    midstr = midstr + (
-                            "select N.object_id, N.node_id as id from (SELECT h.parentnode_id, h.node_id, h.tag_id, o.object_id FROM (SELECT n.parentnode_id, n.id AS node_id, (get_subtree_from_parent_node(n.id)).tag_id AS tag_id FROM nodes n) h JOIN objecttagrelations o ON o.tag_id = h.tag_id) N where N.parentnode_id = %i) R%i " % (
-                        filts[i], i + 1))
-                else:
-                    midstr = midstr + (
-                            "select N.object_id, N.node_id as id from nodes_taggings N where N.parentnode_id = %i) R%i " % (
-                        filts[i], i + 1))
+                midstr = midstr + (
+                        " select N.object_id from nodes_taggings N where N.node_id = %i) R%i " % (
+                    filts[i], i + 1))
 
             if i == 0:
                 midstr = midstr + "join ("
@@ -78,11 +90,37 @@ class PostgresqlPC(PhotoCubeDB):
             else:
                 midstr = midstr + ("on R1.object_id = R%i.object_id join (" % (i + 1))
 
-            endstr = endstr + ("R%i.id" % (i + 1))
-            if i < numdims - 1:
-                endstr = endstr + ", "
-            # print(types[i], filts[i])
+        for i in range(numdims, numtots):
+            if types[i] == "S":
+                midstr = midstr + (
+                        " select T.object_id from tagsets_taggings T where T.tagset_id = %i) R%i " % (
+                    filts[i], i + 1))
+            elif types[i] == "H":
+                midstr = midstr + (
+                        " select N.object_id from nodes_taggings N where N.node_id = %i) R%i " % (
+                    filts[i], i + 1))
+            elif types[i] == "T":
+                midstr = midstr + (" select R.object_id from objecttagrelations R where R.tag_id = %i) R%i " % (
+                    filts[i], i + 1))
+            elif types[i] == "M":
+                midstr = midstr + (" select R.object_id from objecttagrelations R where R.tag_id in ")
+                for j in range(len(filts[i])):
+                    if j == 0:
+                        midstr = midstr + ("(%i" % (filts[i][j]))
+                    else:
+                        midstr = midstr + (", %i" % (filts[i][j]))
+                midstr = midstr + (")) R%i " % (i + 1))
 
+            if i == (numtots - 1):
+                midstr = midstr + ("on R1.object_id = R%i.object_id " % (i + 1))
+            else:
+                midstr = midstr + ("on R1.object_id = R%i.object_id join (" % (i + 1))
+
+        cell_query = ("%s %s %s" % (frontstr, midstr, endstr))
+        return cell_query
+
+    @staticmethod
+    def __apply_filters(baseline, filts, midstr, numdims, numtots, types):
         for i in range(numdims, numtots):
             if types[i] == "S":
                 if baseline:
@@ -119,15 +157,44 @@ class PostgresqlPC(PhotoCubeDB):
             else:
                 midstr = midstr + ("on R1.object_id = R%i.object_id join (" % (i + 1))
             # print(types[i], filts[i])
+        return midstr
 
-        for i in range(numdims, 3):
-            frontstr = frontstr + ("1 as %s, " % attrs[i])
+    @staticmethod
+    def __apply_dimensions(attrs, baseline, endstr, filts, frontstr, midstr, numdims, numtots, types):
+        for i in range(numdims):
+            frontstr = frontstr + ("R%i.id as %s, " % (i + 1, attrs[i]))
 
-        frontstr = frontstr + ("max(R1.object_id) as object_id, count(distinct R1.object_id) as cnt ")
-        endstr = endstr + (") X join cubeobjects O on X.object_id = O.id;")
-        sqlstr = ("%s %s %s" % (frontstr, midstr, endstr))
+            if types[i] == "S":
+                if baseline:
+                    midstr = midstr + (
+                            "select T.object_id, T.tag_id as id from (SELECT t.tagset_id, r.tag_id, r.object_id FROM tags t JOIN objecttagrelations r ON r.tag_id = t.id) T where T.tagset_id = %i) R%i " % (
+                        filts[i], i + 1))
+                else:
+                    midstr = midstr + (
+                            "select T.object_id, T.tag_id as id from tagsets_taggings T where T.tagset_id = %i) R%i " % (
+                        filts[i], i + 1))
+            elif types[i] == "H":
+                if baseline:
+                    midstr = midstr + (
+                            "select N.object_id, N.node_id as id from (SELECT h.parentnode_id, h.node_id, h.tag_id, o.object_id FROM (SELECT n.parentnode_id, n.id AS node_id, (get_subtree_from_parent_node(n.id)).tag_id AS tag_id FROM nodes n) h JOIN objecttagrelations o ON o.tag_id = h.tag_id) N where N.parentnode_id = %i) R%i " % (
+                        filts[i], i + 1))
+                else:
+                    midstr = midstr + (
+                            "select N.object_id, N.node_id as id from nodes_taggings N where N.parentnode_id = %i) R%i " % (
+                        filts[i], i + 1))
 
-        return sqlstr
+            if i == 0:
+                midstr = midstr + "join ("
+            elif i == numtots - 1:
+                midstr = midstr + ("on R1.object_id = R%i.object_id " % (i + 1))
+            else:
+                midstr = midstr + ("on R1.object_id = R%i.object_id join (" % (i + 1))
+
+            endstr = endstr + ("R%i.id" % (i + 1))
+            if i < numdims - 1:
+                endstr = endstr + ", "
+            # print(types[i], filts[i])
+        return endstr, frontstr, midstr
 
     @staticmethod
     def __execute_query(cursor, sqlstr):
