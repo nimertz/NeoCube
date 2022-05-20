@@ -2,7 +2,7 @@ const { gql, ApolloServer } = require("apollo-server");
 const { Neo4jGraphQL } = require("@neo4j/graphql");
 const { OGM } = require("@neo4j/graphql-ogm");
 const neo4j = require("neo4j-driver");
-const {logging} = require("neo4j-driver");
+const { logging } = require("neo4j-driver");
 require("dotenv").config();
 
 const typeDefs = gql`
@@ -88,10 +88,10 @@ const typeDefs = gql`
   }
 
   type Query {
-    cell(TagIDs: [Int]) : [Object!]! @cypher(statement: "MATCH (tag : Tag) WHERE tag.id IN $TagIDs with collect(tag) as tags MATCH(o: Object) WHERE ALL(t in tags WHERE (o)-[:TAGGED]->(t)) RETURN o")
+    cell(TagIDs: [Int], NodeIDs: [Int]) : [Object!]! @cypher(statement: "MATCH (tag : Tag) WHERE tag.id IN $TagIDs WITH collect(tag) as tags WITH tags MATCH (root : Node) WHERE root.id IN $NodeIDs WITH tags, collect(root) as nodes MATCH (o) WHERE ALL(r IN nodes WHERE (r)<-[:HAS_PARENT*0..]-(:Node)-[:REPRESENTS]->(: Tag)<-[:TAGGED]-(o) ) AND ALL(t IN tags WHERE (o)-[:TAGGED]->(t)) RETURN o")
   }
 `;
-const loggingConfig = {logging: neo4j.logging.console('debug')};
+const loggingConfig = { logging: neo4j.logging.console('debug') };
 
 const driver = neo4j.driver(
   process.env.NEO4J_URI,
@@ -103,19 +103,19 @@ const ogm = new OGM({ typeDefs, driver });
 const neoObjects = ogm.model("Object");
 
 const resolvers = {
- 
+
 };
-       
+
 
 const neoSchema = new Neo4jGraphQL({ typeDefs, driver, resolvers });
 
 Promise.all([neoSchema.getSchema(), ogm.init()]).then(([schema]) => {
   const server = new ApolloServer({
-      schema,
-      context: ({ req }) => ({ req }),
-    });
+    schema,
+    context: ({ req }) => ({ req }),
+  });
 
-    server.listen().then(({ url }) => {
-        console.log(`🚀 GraphQL server ready on ${url}`);
-    });
+  server.listen().then(({ url }) => {
+    console.log(`🚀 GraphQL server ready on ${url}`);
+  });
 });
