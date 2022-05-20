@@ -10,6 +10,7 @@ const typeDefs = gql`
     file_type: Int
     file_uri: String
     thumbnail_uri: String
+    timestamp: Int  @cypher(statement: "MATCH (this)-[:TAGGED]->(ts : Tag:Timestamp) RETURN ts.name")
     tags: [TagType!]! @relationship(type: "TAGGED", direction: OUT)
   }
 
