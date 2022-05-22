@@ -24,6 +24,9 @@ import Neo4JPhotocube
 import PostgresqlPhotocube
 # Creating and Configuring Logger
 from GraphCreator import create_latency_barchart, create_latency_scatter_plot, create_cbmi_latency_barchart
+from dotenv import dotenv_values
+
+env = dotenv_values(".env") 
 
 LOG_FORMAT = "%(levelname)s %(asctime)s - %(message)s"
 
@@ -34,19 +37,19 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "123"))
+driver = GraphDatabase.driver(env["NEO4J_URL"], auth=(env["NEO4J_USER"], env["NEO4J_PASSWORD"]))
 neo = Neo4JPhotocube.Neo4jPC(driver)
 
-PSQL_CONN = psycopg.connect(user="photocube", password="123", host="127.0.0.1", port="5432", dbname="photocube")
+PSQL_CONN = psycopg.connect(user=env["PSQL_USER"], password=env["PSQL_PASSWORD"], host=env["PSQL_HOST"], port=env["PSQL_PORT"], dbname=env["PSQL_DB"])
 PSQL_CONN.autocommit = False  # allow for rollback on insert & update queries
 psql = PostgresqlPhotocube.PostgresqlPC(PSQL_CONN)
 
 # LSC dataset max ids
-MAX_TAG_ID = 193189
-MAX_TAGSET_ID = 21
-MAX_HIERARCHY_ID = 3
-MAX_NODE_ID = 8842
-MAX_OBJECT_ID = 183386
+MAX_TAG_ID = int(env["MAX_TAG_ID"])
+MAX_TAGSET_ID = int(env["MAX_TAGSET_ID"])
+MAX_HIERARCHY_ID = int(env["MAX_HIERARCHY_ID"])
+MAX_NODE_ID = int(env["MAX_NODE_ID"])
+MAX_OBJECT_ID = int(env["MAX_OBJECT_ID"])
 
 
 @click.group()

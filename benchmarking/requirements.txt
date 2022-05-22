@@ -1,0 +1,6 @@
+python-dotenv
+numpy
+click 
+seaborn
+neo4j
+psycopg
