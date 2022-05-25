@@ -4,17 +4,16 @@
 //MATCH (n)
 //DETACH DELETE n;
 
-//DROP INDEX ON :Object(id);
-//DROP INDEX ON :Tag(id);
-//DROP INDEX ON :TagSet(id);
-//DROP INDEX ON :Hierarchy(id);
 
-//MERGE constraints and indexes - constrain == index
-CREATE INDEX objects IF NOT EXISTS FOR (o:Object) ON (o.id);
-CREATE INDEX tags IF NOT EXISTS FOR (t:Tag) ON (t.id);
-CREATE INDEX tagsets IF NOT EXISTS FOR (ts:Tagset) ON (ts.id);
-CREATE INDEX hierarchies IF NOT EXISTS FOR (h:Hierarchy) ON (h.id);
-CREATE INDEX nodes IF NOT EXISTS FOR (n:Node) ON (n.id);
+//MERGE constraints and indexes - unique constraint creates index
+CREATE CONSTRAINT objects IF NOT EXISTS FOR (o:Object) REQUIRE o.id IS UNIQUE;
+CREATE CONSTRAINT tags IF NOT EXISTS FOR (t:Tag) REQUIRE t.id IS UNIQUE;
+CREATE CONSTRAINT tagsets IF NOT EXISTS FOR (ts:Tagset) REQUIRE ts.id IS UNIQUE;
+CREATE CONSTRAINT hierarchies IF NOT EXISTS FOR (h:Hierarchy) REQUIRE h.id IS UNIQUE;
+CREATE CONSTRAINT nodes IF NOT EXISTS FOR (n:Node) REQUIRE n.id IS UNIQUE;
+
+// for searching tags by name
+CREATE INDEX tagname IF NOT EXISTS FOR (t:Tag) ON t.name;
 
 //Load photocube data
 :auto USING PERIODIC COMMIT 500
