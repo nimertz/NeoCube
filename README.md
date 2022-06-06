@@ -24,7 +24,7 @@
         <neo4j-home>/import
 2. Run the [photocube_populate.cypher](scripts/photocube_populate.cypher) script to load the data.
 
-## Benchmarking suite
+## Neo4j & PostgreSQL Benchmarking suite
 Located in the [benchmarking](benchmarking/) directory
 ### Dependencies
 numpy, click, seaborn, neo4j, psycopg, python-dotenv
@@ -59,7 +59,9 @@ First place .env file in the server folder with the following properties:
     python3 PhotoCubeBenchmarker.py complete --r 5
 
 ## GraphQL node.js server
-Located in the [server](server/) directory
+https://neo4j.com/product/graphql-library/
+
+Located in the [server](server/) directory.
 ### Dependencies
 @neo4j/graphql @neo4j/graphql-ogm neo4j-driver graphql apollo-server dotenv 
 
@@ -78,6 +80,7 @@ default user and password are neo4j and neo4j.
 ### Run server
     node index.js
 
+The server can be visited at http://localhost:4000. GraphQL queries can be built here through Apollo Studio. 
 
 ## PhotoCube state generators
 Navigate to the [generators](generators/) directory and run the following commands:
