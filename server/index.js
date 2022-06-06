@@ -122,7 +122,7 @@ const resolvers = {
   Query: {
     cell: async (root, args) => {
       const { Dimensions, FilterTypes, FilterIDs } = args;
-      
+
 
       if (Dimensions == 0 | FilterTypes == null) {
         query_all = "MATCH(o: Object) RETURN o.id as Id, o.file_uri as fileURI;";
@@ -141,7 +141,6 @@ const resolvers = {
         );
         return result;
       } else {
-        console.log("Dimensions: " + Dimensions);
         var frontstr = ""  // add profile / explain here
         var midstr = ""
         var endstr = "RETURN DISTINCT o;"
@@ -160,13 +159,13 @@ const resolvers = {
         const numtots = FilterIDs.length;
         for (let i = Dimensions; i < numtots; i++) {
           var cur = i + 1;
-          if(FilterTypes[i] == "H") {
-            midstr += `MATCH (fil${cur}_n: Node {id: ${FilterIDs[i]}})\n`; 
+          if (FilterTypes[i] == "H") {
+            midstr += `MATCH (fil${cur}_n: Node {id: ${FilterIDs[i]}})\n`;
             midstr += `MATCH (fil${cur}_n)<-[:HAS_PARENT]-(R${curr} : Node)<-[:HAS_PARENT*]-(: Node)-[:REPRESENTS]->(: Tag)<-[:TAGGED]-(o: Object)\n`;
-          } else if(FilterTypes[i] == "T") {
+          } else if (FilterTypes[i] == "T") {
             midstr += `MATCH (fil${cur}_t: Tag {id: ${FilterIDs[i]}})\n`;
             midstr += `MATCH (fil${cur}_t: Tag)<-[:TAGGED]-(o: Object)\n`;
-          } else if(FilterTypes[i] == "S") {
+          } else if (FilterTypes[i] == "S") {
             midstr += `MATCH (fil${cur}_t: Tagset {id: ${FilterIDs[i]}})\n`;
             midstr += `MATCH (fil${cur}_t)<-[:IN_TAGSET]-(:Tag)<-[:TAGGED]-(o: Object)\n`;
           }
@@ -179,7 +178,7 @@ const resolvers = {
         }
         ).then(result => {
           return result.records.map(record => {
-            return record.get("o").properties;
+            return record.toObject();
           }
           );
         }
@@ -189,6 +188,65 @@ const resolvers = {
         );
         return result;
       }
+    },
+    state: async (root, args) => {
+      const { Dimensions, FilterTypes, FilterIDs } = args;
+      attrs = ["idx", "idy", "idz"]
+
+      var frontstr = ""  // add profile / explain here
+      var midstr = ""
+      var endstr = "RETURN "
+
+      // handle empty dimensions
+      for (let i = Dimensions; i < 3; i++) {
+        endstr += `1 as ${attrs[i]}, `
+      }
+
+      for (let i = 0; i < Dimensions; i++) {
+        var curr = i + 1;
+        endstr += `R${curr}.id as ${attrs[i]}, `
+        if (FilterTypes[i] == "S") {
+          midstr += `MATCH (dim${curr}_t: Tagset {id: ${FilterIDs[i]}})\n`;
+          midstr += `MATCH (dim${curr}_ts)<-[:IN_TAGSET]-(R${curr}: Tag)<-[:TAGGED]-(o: Object)\n`;
+        } else if (FilterTypes[i] == "H") {
+          midstr += `MATCH (dim${curr}_n: Node {id: ${FilterIDs[i]}})\n`;
+          midstr += `MATCH (dim${curr}_n)<-[:HAS_PARENT]-(R${curr} : Node)<-[:HAS_PARENT*0..]-(: Node)-[:REPRESENTS]->(: Tag)<-[:TAGGED]-(o: Object)\n`;
+        }
+      }
+
+      const numtots = FilterIDs.length;
+      for (let i = Dimensions; i < numtots; i++) {
+        var cur = i + 1;
+        if (FilterTypes[i] == "H") {
+          midstr += `MATCH (fil${cur}_n: Node {id: ${FilterIDs[i]}})\n`;
+          midstr += `MATCH (fil${cur}_n)<-[:HAS_PARENT]-(R${curr} : Node)<-[:HAS_PARENT*]-(: Node)-[:REPRESENTS]->(: Tag)<-[:TAGGED]-(o: Object)\n`;
+        } else if (FilterTypes[i] == "T") {
+          midstr += `MATCH (fil${cur}_t: Tag {id: ${FilterIDs[i]}})\n`;
+          midstr += `MATCH (fil${cur}_t: Tag)<-[:TAGGED]-(o: Object)\n`;
+        } else if (FilterTypes[i] == "S") {
+          midstr += `MATCH (fil${cur}_t: Tagset {id: ${FilterIDs[i]}})\n`;
+          midstr += `MATCH (fil${cur}_t)<-[:IN_TAGSET]-(:Tag)<-[:TAGGED]-(o: Object)\n`;
+        }
+      }
+
+      endstr += "max(o).file_uri as file_uri, count(distinct o) as cnt;"
+
+      const neo4j_state_query = frontstr + midstr + endstr;
+
+
+      const result = await driver.session().readTransaction(tx => {
+        return tx.run(neo4j_state_query);
+      }
+      ).then(result => {
+        return result.records.map(record => {
+          return record.toObject();
+        });
+      }
+      ).catch(error => {
+        console.log(error);
+      }
+      );
+      return result;
     }
   }
 };
