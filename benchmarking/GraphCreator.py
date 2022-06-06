@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def create_latency_scatter_plot(title, results, x_axis, x_label):
+def create_latency_scatter_plot(results, x_axis, x_label, title = ""):
     # seaborn scatter plot of results
     sbn.set(style="darkgrid")
     sbn.set_context("poster")
@@ -19,19 +19,27 @@ def create_latency_scatter_plot(title, results, x_axis, x_label):
     # ax = sbn.lineplot(data=results, x=x_axis, y="latency", hue="category", style="category", markers=True)
     ax = sbn.scatterplot(data=results, x=x_axis, y="latency", hue="category", style="category", markers=True)
 
-    ax.set(xlabel=x_label, ylabel='Mean Latency (ms)', title=title)
+    if(title != ""):
+        ax.set(xlabel=x_label, ylabel='Mean Latency (ms)', title=title)
+    else:
+        ax.set(xlabel=x_label, ylabel='Mean Latency (ms)')
+    
     logger.info("Latency scatter plot created for : " + title)
     return ax
 
 
-def create_latency_barchart(title, results):
+def create_latency_barchart(results, title = ""):
     # seaborn bar plot of results
     sbn.set(style="darkgrid")
     sbn.set_context("poster")
 
     ax = sbn.barplot(x="query", y="latency", hue="category", data=results, log=True, palette="Set2", capsize=.05,
                      errcolor='gray')
-    ax.set(xlabel='Query', ylabel='Mean Latency (ms)', title=title)
+    
+    if(title != ""):
+        ax.set(xlabel='Query', ylabel='Mean Latency (ms)', title=title)
+    else:
+        ax.set(xlabel='Query', ylabel='Mean Latency (ms)')
 
     __show_barchart_values(ax)
 
