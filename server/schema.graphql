@@ -94,6 +94,6 @@ type Object {
   }
 
   type Query {
-    cell(Dimensions: Int!, FilterTypes: [FilterType!]!, FilterIDs: [Int!]!) : [Object!]! 
+    cell(Dimensions: Int!, FilterTypes: [FilterType!]!, FilterIDs: [Int!]!, Offset: Int = 0, Limit: Int = 0) : [Object!]! 
     state(Dimensions: Int!, FilterTypes: [FilterType!]!, FilterIDs: [Int!]!) : [Cell!]!
   }

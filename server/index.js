@@ -25,76 +25,64 @@ const resolvers = {
   Query: {
     cell: async (_root, args) => {
       let session = driver.session();
-      const { Dimensions, FilterTypes, FilterIDs } = args;
+      const { Dimensions, FilterTypes, FilterIDs, Offset, Limit } = args;
 
-      if (Dimensions == 0 | FilterTypes == null) {
-        query_all = "MATCH(o: Object) RETURN o.id as Id, o.file_uri as fileURI;";
-        const result = await session.readTransaction(tx => {
-          return tx.run(query_all);
-        }
-        ).then(result => {
-          return result.records.map(record => {
-            return record.get("o").properties;
-          }
-          );
-        }
-        ).catch(error => {
-          console.log(error);
-        }
-        ).finally( ()=> {
-          session.close();
-        });
-        return result;
-      } else {
-        var frontstr = ""  // add profile / explain here
-        var midstr = ""
-        var endstr = "RETURN DISTINCT o;"
-
-        for (let i = 0; i < Dimensions; i++) {
-          var curr = i + 1;
-          if (FilterTypes[i] == "T") {
-            midstr += `MATCH (dim${curr}_t: Tag {id: ${FilterIDs[i]}})\n`;
-            midstr += `MATCH (dim${curr}_t: Tag)<-[:TAGGED]-(o: Object)\n`;
-          } else if (FilterTypes[i] == "H") {
-            midstr += `MATCH (dim${curr}_n: Node {id: ${FilterIDs[i]}})\n`;
-            midstr += `MATCH (dim${curr}_n)<-[:HAS_PARENT]-(R${curr} : Node)<-[:HAS_PARENT*0..]-(: Node)-[:REPRESENTS]->(: Tag)<-[:TAGGED]-(o: Object)\n`;
-          }
-        }
-
-        const numtots = FilterIDs.length;
-        for (let i = Dimensions; i < numtots; i++) {
-          var cur = i + 1;
-          if (FilterTypes[i] == "H") {
-            midstr += `MATCH (fil${cur}_n: Node {id: ${FilterIDs[i]}})\n`;
-            midstr += `MATCH (fil${cur}_n)<-[:HAS_PARENT]-(R${curr} : Node)<-[:HAS_PARENT*]-(: Node)-[:REPRESENTS]->(: Tag)<-[:TAGGED]-(o: Object)\n`;
-          } else if (FilterTypes[i] == "T") {
-            midstr += `MATCH (fil${cur}_t: Tag {id: ${FilterIDs[i]}})\n`;
-            midstr += `MATCH (fil${cur}_t: Tag)<-[:TAGGED]-(o: Object)\n`;
-          } else if (FilterTypes[i] == "S") {
-            midstr += `MATCH (fil${cur}_t: Tagset {id: ${FilterIDs[i]}})\n`;
-            midstr += `MATCH (fil${cur}_t)<-[:IN_TAGSET]-(:Tag)<-[:TAGGED]-(o: Object)\n`;
-          }
-        }
-
-        const neo4j_cell_query = frontstr + midstr + endstr;
-
-        const result = await session.readTransaction(tx => {
-          return tx.run(neo4j_cell_query);
-        }
-        ).then(result => {
-          return result.records.map(record => {
-            return record.get("o").properties;
-          }
-          );
-        }
-        ).catch(error => {
-          console.log(error);
-        }
-        ).finally( ()=> {
-          session.close();
-        });
-        return result;
+      var frontstr = ""  // add profile / explain here
+      var midstr = ""
+      var endstr = "RETURN DISTINCT o"
+      if (Offset != 0) {
+        endstr += ` SKIP ${Offset}`
       }
+      if (Limit != 0) {
+        endstr += ` LIMIT ${Limit}`
+      }
+      endstr += ";"
+
+      for (let i = 0; i < Dimensions; i++) {
+        var curr = i + 1;
+        if (FilterTypes[i] == "T") {
+          midstr += `MATCH (dim${curr}_t: Tag {id: ${FilterIDs[i]}})\n`;
+          midstr += `MATCH (dim${curr}_t: Tag)<-[:TAGGED]-(o: Object)\n`;
+        } else if (FilterTypes[i] == "H") {
+          midstr += `MATCH (dim${curr}_n: Node {id: ${FilterIDs[i]}})\n`;
+          midstr += `MATCH (dim${curr}_n)<-[:HAS_PARENT]-(R${curr} : Node)<-[:HAS_PARENT*0..]-(: Node)-[:REPRESENTS]->(: Tag)<-[:TAGGED]-(o: Object)\n`;
+        }
+      }
+
+      const numtots = FilterIDs.length;
+      for (let i = Dimensions; i < numtots; i++) {
+        var cur = i + 1;
+        if (FilterTypes[i] == "H") {
+          midstr += `MATCH (fil${cur}_n: Node {id: ${FilterIDs[i]}})\n`;
+          midstr += `MATCH (fil${cur}_n)<-[:HAS_PARENT]-(R${curr} : Node)<-[:HAS_PARENT*]-(: Node)-[:REPRESENTS]->(: Tag)<-[:TAGGED]-(o: Object)\n`;
+        } else if (FilterTypes[i] == "T") {
+          midstr += `MATCH (fil${cur}_t: Tag {id: ${FilterIDs[i]}})\n`;
+          midstr += `MATCH (fil${cur}_t: Tag)<-[:TAGGED]-(o: Object)\n`;
+        } else if (FilterTypes[i] == "S") {
+          midstr += `MATCH (fil${cur}_t: Tagset {id: ${FilterIDs[i]}})\n`;
+          midstr += `MATCH (fil${cur}_t)<-[:IN_TAGSET]-(:Tag)<-[:TAGGED]-(o: Object)\n`;
+        }
+      }
+
+      const neo4j_cell_query = frontstr + midstr + endstr;
+
+      const result = await session.readTransaction(tx => {
+        return tx.run(neo4j_cell_query);
+      }
+      ).then(result => {
+        return result.records.map(record => {
+          return record.get("o").properties;
+        }
+        );
+      }
+      ).catch(error => {
+        console.log(error);
+      }
+      ).finally(() => {
+        session.close();
+      });
+      return result;
+
     },
     state: async (_root, args) => {
       let session = driver.session();
@@ -153,7 +141,7 @@ const resolvers = {
       ).catch(error => {
         console.log(error);
       }
-      ).finally( ()=> {
+      ).finally(() => {
         session.close();
       });
       return result;
