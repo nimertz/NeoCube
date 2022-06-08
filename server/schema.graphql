@@ -1,5 +1,5 @@
 type Object {
-    id: Int @unique
+    id: Int! @unique
     file_type: Int
     file_uri: String
     thumbnail_uri: String
@@ -8,7 +8,7 @@ type Object {
   }
 
   interface Tagging {
-    id: Int 
+    id: Int!
     objects: [Object!]! @relationship(type: "TAGGED", direction: IN)
     tagset: [Tagset!]! @relationship(type: "IN_TAGSET", direction: OUT)
     node: HierarchyNode @relationship(type: "REPRESENTS", direction: IN)
@@ -17,7 +17,7 @@ type Object {
   union TagType = AlphanumericalTag | NumericalTag | DateTag | TimeTag | TimestampTag 
 
   type AlphanumericalTag implements Tagging @node(label: "Alphanumerical", additionalLabels: ["Tag"]) {
-    id: Int @unique
+    id: Int! @unique
     name: String @alias(property: "name")
     objects: [Object!]! @relationship(type: "TAGGED", direction: IN)
     tagset: [Tagset!]! @relationship(type: "IN_TAGSET", direction: OUT)
@@ -25,7 +25,7 @@ type Object {
   }
 
   type NumericalTag implements Tagging @node(label: "Numerical", additionalLabels: ["Tag"]) {
-    id: Int @unique
+    id: Int! @unique
     value: Int @alias(property: "name")
     objects: [Object!]! @relationship(type: "TAGGED", direction: IN)
     tagset: [Tagset!]! @relationship(type: "IN_TAGSET", direction: OUT)
@@ -33,7 +33,7 @@ type Object {
   }
 
   type DateTag implements Tagging @node(label: "Date", additionalLabels: ["Tag"]) {
-    id: Int @unique
+    id: Int! @unique
     date: Date @alias(property: "name")
     objects: [Object!]! @relationship(type: "TAGGED", direction: IN)
     tagset: [Tagset!]! @relationship(type: "IN_TAGSET", direction: OUT)
@@ -41,7 +41,7 @@ type Object {
   }
 
   type TimeTag implements Tagging @node(label: "Time", additionalLabels: ["Tag"]) {
-    id: Int @unique
+    id: Int! @unique
     time: Time @alias(property: "name")
     objects: [Object!]! @relationship(type: "TAGGED", direction: IN)
     tagset: [Tagset!]! @relationship(type: "IN_TAGSET", direction: OUT)
@@ -49,7 +49,7 @@ type Object {
   }
   
   type TimestampTag implements Tagging @node(label: "Timestamp", additionalLabels: ["Tag"]) {
-    id: Int @unique
+    id: Int! @unique
     timestamp: Int @alias(property: "name")
     objects: [Object!]! @relationship(type: "TAGGED", direction: IN)
     tagset: [Tagset!]! @relationship(type: "IN_TAGSET", direction: OUT)
@@ -57,34 +57,34 @@ type Object {
   }
 
   type Tagset {
-    id: Int @unique
+    id: Int! @unique
     name: String
     tags: [TagType!]! @relationship(type: "HAS_TAG", direction: OUT)
   }
 
   type HierarchyNode @node(label: "Node") {
-    id: Int @unique
-    parent: HierarchyNode! @relationship(type: "HAS_PARENT", direction: OUT)
+    id: Int! @unique
+    parent: HierarchyNode @relationship(type: "HAS_PARENT", direction: OUT)
     children: [HierarchyNode!]! @relationship(type: "HAS_PARENT", direction: IN)
-    hierarchy: Hierarchy @relationship(type: "IN_HIERARCHY", direction: OUT)
-    represents: TagType @relationship(type: "REPRESENTS", direction: OUT)
+    hierarchy: Hierarchy! @relationship(type: "IN_HIERARCHY", direction: OUT)
+    represents: TagType! @relationship(type: "REPRESENTS", direction: OUT)
     subnodes: [HierarchyNode!]! @cypher(statement: "MATCH (this)<-[:HAS_PARENT*]-(n : Node) RETURN n")
     tagname: String @cypher(statement: "MATCH (this)-[:REPRESENTS]->(t : Tag) RETURN t.name")
     objects: [Object!]! @cypher(statement: "MATCH (this)-[:REPRESENTS]->(t : Tag)<-[:TAGGED]-(o : Object) RETURN o")
   }
 
   type Hierarchy {
-    id: Int @unique
+    id: Int! @unique
     name: String
-    root: HierarchyNode @relationship(type: "HAS_ROOT", direction: OUT)
+    root: HierarchyNode! @relationship(type: "HAS_ROOT", direction: OUT)
   }
 
   type Cell {
-    idx: Int
-    idy: Int
-    idz: Int
-    file_uri: String
-    cnt: Int
+    idx: Int!
+    idy: Int!
+    idz: Int!
+    file_uri: String!
+    cnt: Int!
   }
 
   enum FilterType {
@@ -94,6 +94,6 @@ type Object {
   }
 
   type Query {
-    cell(Dimensions: Int, FilterTypes: [FilterType], FilterIDs: [Int]) : [Object!]! 
-    state(Dimensions: Int, FilterTypes: [FilterType], FilterIDs: [Int]) : [Cell!]!
+    cell(Dimensions: Int!, FilterTypes: [FilterType!]!, FilterIDs: [Int!]!) : [Object!]! 
+    state(Dimensions: Int!, FilterTypes: [FilterType!]!, FilterIDs: [Int!]!) : [Cell!]!
   }
