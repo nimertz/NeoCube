@@ -22,7 +22,9 @@
 1. Place photocube csv data in the neo4j import folder. 
 
         <neo4j-home>/import
-2. Run the [photocube_populate.cypher](scripts/photocube_populate.cypher) script to load the data.
+2. Run the [photocube_populate.cypher](scripts/photocube_populate.cypher) script to load the data. This script requires the Neo4j apoc library for timestamp tag name formatting.
+   
+        cypher-shell -u neo4j -d neo4j -f photocube_populate.cypher
 
 ## Neo4j & PostgreSQL Benchmarking suite
 Located in the [benchmarking](benchmarking/) directory

@@ -16,7 +16,7 @@ CREATE CONSTRAINT nodes IF NOT EXISTS FOR (n:Node) REQUIRE n.id IS UNIQUE;
 CREATE INDEX tagname IF NOT EXISTS FOR (t:Tag) ON t.name;
 
 //Load photocube data
-:auto USING PERIODIC COMMIT 500
+USING PERIODIC COMMIT 500
 
 //Objects
 LOAD CSV WITH HEADERS FROM 'file:///cubeobjects.csv' AS co
@@ -41,13 +41,13 @@ LOAD CSV WITH HEADERS FROM 'file:///time_tags.csv' AS tt
 MERGE (time:Tag:Time {id:toInteger(tt.id), name:time(tt.name)})
 RETURN count(time);
 //timestamp tags
-:auto USING PERIODIC COMMIT 500
+USING PERIODIC COMMIT 500
 LOAD CSV WITH HEADERS FROM 'file:///timestamp_tags.csv' AS tst
 MERGE (timestamp:Tag:Timestamp {id:toInteger(tst.id), name:apoc.date.parse(tst.name, "s", "yyyy-MM-dd HH:mm:ss")}) // to seconds
 RETURN count(timestamp);
 
 //Object --> Tag  
-:auto USING PERIODIC COMMIT 500 // Needed for large data sets
+USING PERIODIC COMMIT 500 // Needed for large data sets
 LOAD CSV WITH HEADERS FROM 'file:///objecttagrelations.csv' AS ot
 MATCH (o:Object {id:toInteger(ot.object_id)}), (t:Tag {id:toInteger(ot.tag_id)})
 MERGE (o)-[r:TAGGED]->(t)
@@ -99,7 +99,7 @@ MERGE (n)-[r:HAS_PARENT]->(p)
 RETURN count(r);
 
 //Tagset --> Tag | Tag --> Tagset
-:auto USING PERIODIC COMMIT 500 // Needed for large data sets
+USING PERIODIC COMMIT 500 // Needed for large data sets
 LOAD CSV WITH HEADERS FROM 'file:///tags.csv' AS t
 MATCH (tag:Tag {id:toInteger(t.id)}), (tset:Tagset {id:toInteger(t.tagset_id)})
 MERGE (tag)-[r:IN_TAGSET]->(tset)
