@@ -24,12 +24,12 @@ const ogm = new OGM({ typeDefs, driver });
 const resolvers = {
   Query: {
     cell: async (_root, args) => {
+      let session = driver.session();
       const { Dimensions, FilterTypes, FilterIDs } = args;
-
 
       if (Dimensions == 0 | FilterTypes == null) {
         query_all = "MATCH(o: Object) RETURN o.id as Id, o.file_uri as fileURI;";
-        const result = await driver.session().readTransaction(tx => {
+        const result = await session.readTransaction(tx => {
           return tx.run(query_all);
         }
         ).then(result => {
@@ -41,7 +41,9 @@ const resolvers = {
         ).catch(error => {
           console.log(error);
         }
-        );
+        ).finally( ()=> {
+          session.close();
+        });
         return result;
       } else {
         var frontstr = ""  // add profile / explain here
@@ -76,7 +78,7 @@ const resolvers = {
 
         const neo4j_cell_query = frontstr + midstr + endstr;
 
-        const result = await driver.session().readTransaction(tx => {
+        const result = await session.readTransaction(tx => {
           return tx.run(neo4j_cell_query);
         }
         ).then(result => {
@@ -88,11 +90,14 @@ const resolvers = {
         ).catch(error => {
           console.log(error);
         }
-        );
+        ).finally( ()=> {
+          session.close();
+        });
         return result;
       }
     },
     state: async (_root, args) => {
+      let session = driver.session();
       const { Dimensions, FilterTypes, FilterIDs } = args;
       attrs = ["idx", "idy", "idz"]
 
@@ -137,7 +142,7 @@ const resolvers = {
       const neo4j_state_query = frontstr + midstr + endstr;
 
 
-      const result = await driver.session().readTransaction(tx => {
+      const result = await session.readTransaction(tx => {
         return tx.run(neo4j_state_query);
       }
       ).then(result => {
@@ -148,7 +153,9 @@ const resolvers = {
       ).catch(error => {
         console.log(error);
       }
-      );
+      ).finally( ()=> {
+        session.close();
+      });
       return result;
     }
   }
