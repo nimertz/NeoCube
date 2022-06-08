@@ -78,6 +78,8 @@ def comp_random_state_benchmark(db1: PhotoCubeDB, db2: PhotoCubeDB, reps, result
     numtots = 3
     for _ in range(reps):
         types, filts = __get_random_dimensions(type_options, numdims)
+        while (types == ['S', 'S', 'S']):
+            types, filts = __get_random_dimensions(type_options, numdims)
 
         query_name = "3D state"
         state_benchmark(db1, result, numdims, numtots, types, filts, db1.get_name(), query_name)
@@ -93,6 +95,8 @@ def comp_random_cell_benchmark(db1: PhotoCubeDB, db2: PhotoCubeDB, reps, result)
     numtots = 3
     for _ in range(reps):
         types, filts = __get_random_dimensions(type_options, numdims)
+        while (types == ['S', 'S', 'S']):
+            types, filts = __get_random_dimensions(type_options, numdims)
 
         query_name = "3D cell"
         logger.info("cell query generation using " + str(types) + " and " + str(filts))
