@@ -23,7 +23,7 @@ const ogm = new OGM({ typeDefs, driver });
 
 const resolvers = {
   Query: {
-    cell: async (root, args) => {
+    cell: async (_root, args) => {
       const { Dimensions, FilterTypes, FilterIDs } = args;
 
 
@@ -92,7 +92,7 @@ const resolvers = {
         return result;
       }
     },
-    state: async (root, args) => {
+    state: async (_root, args) => {
       const { Dimensions, FilterTypes, FilterIDs } = args;
       attrs = ["idx", "idy", "idz"]
 
@@ -156,10 +156,12 @@ const resolvers = {
 
 const neoSchema = new Neo4jGraphQL({ typeDefs, driver, resolvers });
 
-Promise.all([neoSchema.getSchema(), ogm.init()]).then(([schema]) => {
+neoSchema.getSchema().then(async (schema) => {
+  // Assert indexes and constraints defined using GraphQL schema directives
+  await neoSchema.assertIndexesAndConstraints({ options: { create: true } });
+
   const server = new ApolloServer({
     schema,
-    context: ({ req }) => ({ req }),
   });
 
   server.listen().then(({ url }) => {
