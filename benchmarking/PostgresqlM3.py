@@ -1,7 +1,7 @@
-from PhotoCubeDatabaseInterface import PhotoCubeDB
+from M3DatabaseInterface import M3DB
 
 
-class PostgresqlPC(PhotoCubeDB):
+class PostgresqlPC(M3DB):
     """
     This class is used to connect to the PostgreSQL database and execute queries.
     """

@@ -1,7 +1,7 @@
-from PhotoCubeDatabaseInterface import PhotoCubeDB
+from M3DatabaseInterface import M3DB
 
 
-class Neo4jPC(PhotoCubeDB):
+class Neo4jPC(M3DB):
     """
     This class is used to connect to the Neo4j database and execute queries.
     """
