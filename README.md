@@ -1,11 +1,11 @@
-# PhotoCubeGraph
+# NeoCube
 
 ## Neo4j
 ### install
     sudo apt-get install neo4j
 
 
-### Load PhotoCube data
+### Load NeoCube data
 **CSV files needed:**
 * cubeobjects.csv
 * tags.csv
@@ -19,12 +19,12 @@
 * nodes.csv
 * hierarchies.csv
 
-1. Place photocube csv data in the neo4j import folder. 
+1. Place M<sup>3</sup> csv data in the neo4j import folder. 
 
         <neo4j-home>/import
-2. Run the [photocube_populate.cypher](scripts/photocube_populate.cypher) script to load the data. This script requires the Neo4j apoc library for timestamp tag name formatting.
+2. Run the [neocube_populate.cypher](scripts/neocube_populate.cypher) script to load the data. This script requires the Neo4j apoc library for timestamp tag name formatting.
    
-        cypher-shell -u neo4j -d neo4j -f photocube_populate.cypher
+        cypher-shell -u neo4j -d neo4j -f neocube_populate.cypher
 
 ## Neo4j & PostgreSQL Benchmarking suite
 Located in the [benchmarking](benchmarking/) directory
@@ -56,9 +56,9 @@ First place .env file in the server folder with the following properties:
 
 ### Run benchmarks
 
-    python3 PhotoCubeBenchmarker.py --help
+    python3 M3Benchmarker.py --help
 
-    python3 PhotoCubeBenchmarker.py complete --r 5
+    python3 M3Benchmarker.py complete --r 5
 
 ## GraphQL node.js server
 https://neo4j.com/product/graphql-library/
@@ -84,7 +84,7 @@ default user and password are neo4j and neo4j.
 
 The server can be visited at http://localhost:4000. GraphQL queries can be built here through Apollo Studio. 
 
-## PhotoCube state generators
+## M<sup>3</sup> state generators
 Navigate to the [generators](generators/) directory and run the following commands:
 
     python3 postgresql_state_generator_V7.py < 3d.txt

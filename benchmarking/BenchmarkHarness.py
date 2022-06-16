@@ -2,9 +2,9 @@ import datetime
 import logging
 import random
 
-from PhotoCubeBenchmarker import MAX_TAGSET_ID, MAX_NODE_ID, MAX_OBJECT_ID, MAX_TAG_ID
-from PhotoCubeDatabaseInterface import PhotoCubeDB
-from PostgresqlPhotocube import PostgresqlPC
+from M3Benchmarker import MAX_TAGSET_ID, MAX_NODE_ID, MAX_OBJECT_ID, MAX_TAG_ID
+from M3DatabaseInterface import M3DB
+from PostgresqlM3 import PostgresqlPC
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ def comp_bench_rand_id(name, category1, category2, query_method1, query_method2,
     return result
 
 
-def comp_random_state_benchmark(db1: PhotoCubeDB, db2: PhotoCubeDB, reps, result):
+def comp_random_state_benchmark(db1: M3DB, db2: M3DB, reps, result):
     logger.info(
         "Running random state " + db1.get_name() + " & " + db2.get_name() + " benchmark with " + str(reps) + " reps")
     # generate different queries
@@ -86,7 +86,7 @@ def comp_random_state_benchmark(db1: PhotoCubeDB, db2: PhotoCubeDB, reps, result
         state_benchmark(db2, result, numdims, numtots, types, filts, db2.get_name(), query_name)
     return result
 
-def comp_random_cell_benchmark(db1: PhotoCubeDB, db2: PhotoCubeDB, reps, result):
+def comp_random_cell_benchmark(db1: M3DB, db2: M3DB, reps, result):
     logger.info(
         "Running random cell " + db1.get_name() + " & " + db2.get_name() + " benchmark with " + str(reps) + " reps")
     # generate different queries
@@ -110,7 +110,7 @@ def comp_random_cell_benchmark(db1: PhotoCubeDB, db2: PhotoCubeDB, reps, result)
 
 
 
-def cell_number_state_benchmark(db1: PhotoCubeDB, db2: PhotoCubeDB, reps, result):
+def cell_number_state_benchmark(db1: M3DB, db2: M3DB, reps, result):
     logger.info(
         "Running cell number effect of state query for " + db1.get_name() + " & " + db2.get_name() + " benchmark with " + str(
             reps) + " reps")
@@ -129,7 +129,7 @@ def cell_number_state_benchmark(db1: PhotoCubeDB, db2: PhotoCubeDB, reps, result
     return result
 
 
-def max_objects_dim_number_state_benchmark(db1: PhotoCubeDB, db2: PhotoCubeDB, reps, result):
+def max_objects_dim_number_state_benchmark(db1: M3DB, db2: M3DB, reps, result):
     logger.info(
         "Running max objects dimension effect of state query for " + db1.get_name() + " & " + db2.get_name() + " benchmark with " + str(
             reps) + " reps")
@@ -161,7 +161,7 @@ def max_objects_dim_number_state_benchmark(db1: PhotoCubeDB, db2: PhotoCubeDB, r
     return result
 
 
-def total_object_count_state_benchmark(db1: PhotoCubeDB, db2: PhotoCubeDB, reps, result):
+def total_object_count_state_benchmark(db1: M3DB, db2: M3DB, reps, result):
     logger.info(
         "Running object count sum effect of state query for " + db1.get_name() + " & " + db2.get_name() + " benchmark with " + str(
             reps) + " reps")
@@ -209,7 +209,7 @@ def __sum_state_cnt(rows):
     return cnt_sum
 
 
-def state_benchmark(db: PhotoCubeDB, result, numdims, numtots, types, filts, category, query_name="State"):
+def state_benchmark(db: M3DB, result, numdims, numtots, types, filts, category, query_name="State"):
     logger.info(
         "State query generation using:\n numdims=%i, numtots=%i, types=%s, filts=%s" % (numdims, numtots, types, filts))
     start = datetime.datetime.now()
@@ -223,7 +223,7 @@ def state_benchmark(db: PhotoCubeDB, result, numdims, numtots, types, filts, cat
     __append_results(query_name, time, category, result)
 
 
-def random_state_benchmark(db: PhotoCubeDB, category, reps, result):
+def random_state_benchmark(db: M3DB, category, reps, result):
     logger.info("Running " + category + " benchmark with " + str(reps) + " reps")
     # generate different queries
     type_options = ["S", "H"]
@@ -239,7 +239,7 @@ def random_state_benchmark(db: PhotoCubeDB, category, reps, result):
     return result
 
 
-def benchmark_string_query(db: PhotoCubeDB, reps, query, query_name, category, result):
+def benchmark_string_query(db: M3DB, reps, query, query_name, category, result):
     for _ in range(reps):
         start = datetime.datetime.now()
         db.execute_query(query)
@@ -250,7 +250,7 @@ def benchmark_string_query(db: PhotoCubeDB, reps, query, query_name, category, r
     return result
 
 
-def insert_object_benchmark(db: PhotoCubeDB, category, reps, result):
+def insert_object_benchmark(db: M3DB, category, reps, result):
     logger.info("Running insert object benchmark in " + category + " with " + str(reps) + " reps")
     for i in range(MAX_OBJECT_ID + 1, MAX_OBJECT_ID + 1 + reps):
         start = datetime.datetime.now()
@@ -263,7 +263,7 @@ def insert_object_benchmark(db: PhotoCubeDB, category, reps, result):
     return result
 
 
-def insert_tag_benchmark(db: PhotoCubeDB, category, reps, result):
+def insert_tag_benchmark(db: M3DB, category, reps, result):
     logger.info("Running insert tag benchmark in " + category + " with " + str(reps) + " reps")
     for i in range(MAX_TAG_ID + 1, MAX_TAG_ID + 1 + reps):
         start = datetime.datetime.now()
@@ -372,37 +372,37 @@ def three_two_filters_dimensions_state(db, category, reps, result, neo=False):
     return __psql_baseline_materialize_index_benchmark(db, category, reps, result, numdims, numtots, types, filts)
 
 
-def simple_state_comp_benchmark(db1: PhotoCubeDB, db2: PhotoCubeDB, category, reps, result, incl_baseline=False):
+def simple_state_comp_benchmark(db1: M3DB, db2: M3DB, category, reps, result, incl_baseline=False):
     numdims, numtots, types, filts = __get_simple_state_params()
 
     return __comp_state_benchmark(db1, db2, category, reps, result, numdims, numtots, types, filts, incl_baseline)
 
 
-def medium_state_comp_benchmark(db1: PhotoCubeDB, db2: PhotoCubeDB, category, reps, result, incl_baseline=False):
+def medium_state_comp_benchmark(db1: M3DB, db2: M3DB, category, reps, result, incl_baseline=False):
     numdims, numtots, types, filts = __get_medium_state_params()
 
     return __comp_state_benchmark(db1, db2, category, reps, result, numdims, numtots, types, filts, incl_baseline)
 
 
-def complex_state_comp_benchmark(db1: PhotoCubeDB, db2: PhotoCubeDB, category, reps, result, incl_baseline=False):
+def complex_state_comp_benchmark(db1: M3DB, db2: M3DB, category, reps, result, incl_baseline=False):
     numdims, numtots, types, filts = __get_complex_state_params()
 
     return __comp_state_benchmark(db1, db2, category, reps, result, numdims, numtots, types, filts, incl_baseline)
 
 
-def comp_2d_state_benchmark(db1: PhotoCubeDB, db2: PhotoCubeDB, category, reps, result, incl_baseline=False):
+def comp_2d_state_benchmark(db1: M3DB, db2: M3DB, category, reps, result, incl_baseline=False):
     numdims, numtots, types, filts = __get_2d_state_params()
 
     return __comp_state_benchmark(db1, db2, category, reps, result, numdims, numtots, types, filts, incl_baseline)
 
 
-def comp_3d_state_benchmark(db1: PhotoCubeDB, db2: PhotoCubeDB, category, reps, result, incl_baseline=False):
+def comp_3d_state_benchmark(db1: M3DB, db2: M3DB, category, reps, result, incl_baseline=False):
     numdims, numtots, types, filts = __get_3d_state_params()
 
     return __comp_state_benchmark(db1, db2, category, reps, result, numdims, numtots, types, filts, incl_baseline)
 
 
-def comp_3d_2f_state_benchmark(db1: PhotoCubeDB, db2: PhotoCubeDB, category, reps, result, incl_baseline=False):
+def comp_3d_2f_state_benchmark(db1: M3DB, db2: M3DB, category, reps, result, incl_baseline=False):
     numdims, numtots, types, filts = __get_3d_2f_state_params()
 
     return __comp_state_benchmark(db1, db2, category, reps, result, numdims, numtots, types, filts, incl_baseline)

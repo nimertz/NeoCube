@@ -20,8 +20,8 @@ from matplotlib import pyplot as plt
 from neo4j import GraphDatabase
 
 import BenchmarkHarness
-import Neo4JPhotocube
-import PostgresqlPhotocube
+import Neo4JM3 as Neo4JM3
+import PostgresqlM3 as PostgresqlM3
 # Creating and Configuring Logger
 from GraphCreator import create_latency_barchart, create_latency_scatter_plot, create_cbmi_latency_barchart
 from dotenv import dotenv_values
@@ -38,11 +38,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 driver = GraphDatabase.driver(env["NEO4J_URL"], auth=(env["NEO4J_USER"], env["NEO4J_PASSWORD"]))
-neo = Neo4JPhotocube.Neo4jPC(driver)
+neo = Neo4JM3.Neo4jPC(driver)
 
 PSQL_CONN = psycopg.connect(user=env["PSQL_USER"], password=env["PSQL_PASSWORD"], host=env["PSQL_HOST"], port=env["PSQL_PORT"], dbname=env["PSQL_DB"])
 PSQL_CONN.autocommit = False  # allow for rollback on insert & update queries
-psql = PostgresqlPhotocube.PostgresqlPC(PSQL_CONN)
+psql = PostgresqlM3.PostgresqlPC(PSQL_CONN)
 
 # LSC dataset max ids
 MAX_TAG_ID = int(env["MAX_TAG_ID"])

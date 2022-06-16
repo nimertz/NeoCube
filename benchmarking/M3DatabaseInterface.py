@@ -1,4 +1,4 @@
-class PhotoCubeDB:
+class M3DB:
     def get_name(self):
         """Get the name of the database"""
         pass
