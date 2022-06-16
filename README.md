@@ -1,8 +1,13 @@
 # NeoCube: The Graph-Based Implementation of the M<sup>3</sup> Data Model
-
+MSc Thesis | Summer 2022 | MSc Computer Science | IT University of Copenhagen
 
 The M<sup>3</sup> model is a data model for media exploration that builds on and combines aspects of multi-dimensional analysis and faceted search to get the best of
-both worlds.
+both worlds. The data model has previously only been represented as a relational model. This project aims to translate the M<sup>3</sup> data model to graph, evaluating it using large-scale datasets. 
+
+The repository current contains the following:
+* [Scripts](scripts/) for populating Neo4j graph data model with M<sup>3</sup> CSV data.
+* Python [benchmarking](benchmarking/) suite with CLI & graph output
+* Prototype Node.js GraphQL [server](server/)
 
 ## Neo4j
 ### install
