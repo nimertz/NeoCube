@@ -1,4 +1,8 @@
-# NeoCube
+# NeoCube: The Graph-Based Implementation of the M<sup>3</sup> Data Model
+
+
+The M<sup>3</sup> model is a data model for media exploration that builds on and combines aspects of multi-dimensional analysis and faceted search to get the best of
+both worlds.
 
 ## Neo4j
 ### install
@@ -89,3 +93,18 @@ Navigate to the [generators](generators/) directory and run the following comman
 
     python3 postgresql_state_generator_V7.py < 3d.txt
     python3 neo4j_state_generator_V1.py < 3d.txt
+
+
+## Benchmarking Results
+
+### [VBS](https://videobrowsershowdown.org/call-for-papers/existing-data-and-tools/) dataset
+
+![VBS M3 read operation latency comparison](results/vbs/vbs_read_100.png "VBS M3 read operation latency comparison")
+
+![VBS M3 write operation latency comparison](results/vbs/vbs_write_3.png "VBS M3 write operation latency comparison")
+
+### [LSC](http://lsc.dcu.ie/lsc_data/) dataset
+
+![LSC M3 read operation latency comparison](results/thesis/read_100.png "LSC M3 read operation latency comparison")
+
+![LSC M3 write operation latency comparison](results/thesis/write_5.png "LSC M3 write operation latency comparison")
