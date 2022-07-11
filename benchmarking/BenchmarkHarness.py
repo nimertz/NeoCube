@@ -250,28 +250,45 @@ def benchmark_string_query(db: M3DB, reps, query, query_name, category, result):
     return result
 
 
-def insert_object_benchmark(db: M3DB, category, reps, result):
+def insert_object_benchmark(db: M3DB, category, reps, result, refresh=True):
     logger.info("Running insert object benchmark in " + category + " with " + str(reps) + " reps")
-    for i in range(MAX_OBJECT_ID + 1, MAX_OBJECT_ID + 1 + reps):
-        start = datetime.datetime.now()
-        db.insert_object(i, "BENCHMARK_OBJECT_" + str(i), 42, "BENCHMARK_OBJECT_" + str(i))
-        db.refresh_object_views()
-        end = datetime.datetime.now()
-        duration = (end - start).total_seconds() * 1e3
-        __append_results("Insert object", duration, category, result)
+
+    if(refresh):
+        for i in range(MAX_OBJECT_ID + 1, MAX_OBJECT_ID + 1 + reps):
+            start = datetime.datetime.now()
+            db.insert_object(i, "BENCHMARK_OBJECT_" + str(i), 42, "BENCHMARK_OBJECT_" + str(i))
+            db.refresh_object_views()
+            end = datetime.datetime.now()
+            duration = (end - start).total_seconds() * 1e3
+            __append_results("Insert object", duration, category, result)
+    else:
+        for i in range(MAX_OBJECT_ID + 1, MAX_OBJECT_ID + 1 + reps):
+            start = datetime.datetime.now()
+            db.insert_object(i, "BENCHMARK_OBJECT_" + str(i), 42, "BENCHMARK_OBJECT_" + str(i))
+            end = datetime.datetime.now()
+            duration = (end - start).total_seconds() * 1e3
+            __append_results("Insert object", duration, category, result)
     db.rollback()
     return result
 
 
-def insert_tag_benchmark(db: M3DB, category, reps, result):
+def insert_tag_benchmark(db: M3DB, category, reps, result, refresh=True):
     logger.info("Running insert tag benchmark in " + category + " with " + str(reps) + " reps")
-    for i in range(MAX_TAG_ID + 1, MAX_TAG_ID + 1 + reps):
-        start = datetime.datetime.now()
-        db.insert_tag(i, "BENCHMARK_TAG_" + str(i), 1, MAX_TAGSET_ID)
-        db.refresh_all_views()
-        end = datetime.datetime.now()
-        duration = (end - start).total_seconds() * 1e3
-        __append_results("Insert tag", duration, category, result)
+    if(refresh):
+        for i in range(MAX_TAG_ID + 1, MAX_TAG_ID + 1 + reps):
+            start = datetime.datetime.now()
+            db.insert_tag(i, "BENCHMARK_TAG_" + str(i), 1, MAX_TAGSET_ID)
+            db.refresh_all_views()
+            end = datetime.datetime.now()
+            duration = (end - start).total_seconds() * 1e3
+            __append_results("Insert tag", duration, category, result)
+    else:
+         for i in range(MAX_TAG_ID + 1, MAX_TAG_ID + 1 + reps):
+            start = datetime.datetime.now()
+            db.insert_tag(i, "BENCHMARK_TAG_" + str(i), 1, MAX_TAGSET_ID)
+            end = datetime.datetime.now()
+            duration = (end - start).total_seconds() * 1e3
+            __append_results("Insert tag", duration, category, result)
     db.rollback()
     db.delete_all_benchmark_data()
     return result

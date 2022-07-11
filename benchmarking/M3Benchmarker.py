@@ -58,7 +58,7 @@ def benchmark():
 
 @benchmark.command("read")
 @click.option("--r", default=10, help="Number of query repetitions")
-def standard_latency_benchmark(r):
+def state_cell_benchmark(r):
     """Standard benchmarking of all read query comparisons.
     Runs all postgreSQL & Neo4J photocube read queries comparisons. Random ids used are the same for both databases to ensure fair comparison."""
     logger.info("Running standard latency benchmark with " + str(r) + " repetitions")
@@ -81,10 +81,27 @@ def standard_latency_benchmark(r):
     psql.close()
 
 
+@benchmark.command("state-cell")
+@click.option("--r", default=10, help="Number of query repetitions")
+def state_cell_benchmark(r):
+    """Standard benchmarking of state & cell comparisons.
+    Runs state & cell postgreSQL & Neo4J read queries comparisons. Random ids used are the same for both databases to ensure fair comparison."""
+    logger.info("Running state & cell latency benchmark with " + str(r) + " repetitions")
+    results = {'query': [], 'latency': [], 'category': []}
+
+    BenchmarkHarness.comp_random_state_benchmark(psql, neo, r, results)
+    BenchmarkHarness.comp_random_cell_benchmark(psql, neo, r, results)
+
+    title = "Latency of state & cell queries of Neo4j and Postgresql" + "\n" + "Query repetitions: %i " % r
+    create_cbmi_latency_barchart(results)
+    plt.show()
+    neo.close()
+    psql.close()
+
 @benchmark.command("complete")
 @click.option("--r", default=10, help="Number of query repetitions")
 @click.option("--w", is_flag=True, help="Benchmark insert & update queries? (default: False)")
-def standard_latency_benchmark(r, w):
+def state_cell_benchmark(r, w):
     """Standard benchmarking for all comparisons.
     Runs all postgreSQL & Neo4J photocube queries comparisons. Random ids used are the same for both databases to ensure fair comparison."""
     logger.info("Running standard latency benchmark with " + str(r) + " repetitions")
@@ -171,9 +188,12 @@ def write_latency_benchmark(r):
     logger.info("Running write latency benchmark with " + str(r) + " repetitions")
     results = {'query': [], 'latency': [], 'category': []}
 
+
+    BenchmarkHarness.insert_object_benchmark(psql, psql.get_name() + " Baseline", r, results,refresh=False)
     BenchmarkHarness.insert_object_benchmark(psql, psql.get_name(), r, results)
     BenchmarkHarness.insert_object_benchmark(neo, neo.get_name(), r, results)
 
+    BenchmarkHarness.insert_tag_benchmark(psql, psql.get_name() + " Baseline", r, results,refresh=False)
     BenchmarkHarness.insert_tag_benchmark(psql, psql.get_name(), r, results)
     BenchmarkHarness.insert_tag_benchmark(neo, neo.get_name(), r, results)
 

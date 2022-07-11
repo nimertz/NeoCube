@@ -48,7 +48,7 @@ def create_latency_barchart(results, title = ""):
     return ax
 
 
-def create_cbmi_latency_barchart(results):
+def create_cbmi_latency_barchart(results,pattern=False):
     # seaborn bar plot of results
     sbn.set(style="darkgrid")
     sbn.set_context("poster")
@@ -60,7 +60,8 @@ def create_cbmi_latency_barchart(results):
     print(ylabels)
     ax.set_yticklabels(ylabels)
 
-    __give_bars_pattern(results, ax)
+    if(pattern):
+        __give_bars_pattern(results, ax)
     __show_barchart_values(ax)
 
     sbn.despine()
