@@ -18,13 +18,16 @@ def __get_random_dimensions(type_options, numdims):
     filts = []
     for i in range(numdims):
         types.append(type_options[random.randint(0, len(type_options) - 1)])
-        if types[i] == "S":
-            filts.append(__get_random_id(MAX_TAGSET_ID))
-        elif types[i] == "H":
-            filts.append(__get_random_id(MAX_NODE_ID))
-        elif types[i] == "T":
-            filts.append(__get_random_id(MAX_TAG_ID))
+        __get_filter_ids_from_types(types, filts, i)
     return types, filts
+
+def __get_filter_ids_from_types(types, filts, i):
+    if types[i] == "S":
+        filts.append(__get_random_id(MAX_TAGSET_ID))
+    elif types[i] == "H":
+        filts.append(__get_random_id(MAX_NODE_ID))
+    elif types[i] == "T":
+        filts.append(__get_random_id(MAX_TAG_ID))
 
 
 def __append_metric_results(metric_name, metric, duration, category, result):
@@ -68,6 +71,40 @@ def comp_bench_rand_id(name, category1, category2, query_method1, query_method2,
         __append_results(name, duration.total_seconds() * 1e3, category2, result)
     return result
 
+def comp_random_state_types_benchmark(db1: M3DB, db2: M3DB, reps, result):
+    logger.info(
+        "Running random state types " + db1.get_name() + " & " + db2.get_name() + " benchmark with " + str(reps) + " reps")
+    # generate different queries
+    numdims = 3
+    numtots = 3
+    for _ in range(reps):
+        types = ["H", "H","H"]
+        filts = []
+        for i in range(numdims):
+            __get_filter_ids_from_types(types, filts, i)
+        
+        query_name = "3 Node"
+        state_benchmark(db1, result, numdims, numtots, types, filts, db1.get_name(), query_name)
+        state_benchmark(db2, result, numdims, numtots, types, filts, db2.get_name(), query_name)
+
+        types = ["H", "H","S"]
+        filts = []
+        for i in range(numdims):
+            __get_filter_ids_from_types(types, filts, i)
+        
+        query_name = "2 Node + 1 Tagset"
+        state_benchmark(db1, result, numdims, numtots, types, filts, db1.get_name(), query_name)
+        state_benchmark(db2, result, numdims, numtots, types, filts, db2.get_name(), query_name)
+
+        types = ["H", "S","S"]
+        filts = []
+        for i in range(numdims):
+            __get_filter_ids_from_types(types, filts, i)
+        
+        query_name = "1 Node + 2 Tagset"
+        state_benchmark(db1, result, numdims, numtots, types, filts, db1.get_name(), query_name)
+        state_benchmark(db2, result, numdims, numtots, types, filts, db2.get_name(), query_name)
+    return result
 
 def comp_random_state_benchmark(db1: M3DB, db2: M3DB, reps, result):
     logger.info(
@@ -211,7 +248,7 @@ def __sum_state_cnt(rows):
 
 def state_benchmark(db: M3DB, result, numdims, numtots, types, filts, category, query_name="State"):
     logger.info(
-        "State query generation using:\n numdims=%i, numtots=%i, types=%s, filts=%s" % (numdims, numtots, types, filts))
+        db.get_name() + ": State query benchmark using:\n numdims=%i, numtots=%i, types=%s, filts=%s" % (numdims, numtots, types, filts))
     start = datetime.datetime.now()
     db.execute_query(db.gen_state_query(numdims, numtots, types, filts))
     end = datetime.datetime.now()
@@ -221,6 +258,7 @@ def state_benchmark(db: M3DB, result, numdims, numtots, types, filts, category, 
         logger.warning(db.get_name() + " state query time: " + str(round(time, 2)) + " ms" +
                        " parameters: " + str(types) + " " + str(filts))
     __append_results(query_name, time, category, result)
+    return result
 
 
 def random_state_benchmark(db: M3DB, category, reps, result):
@@ -297,7 +335,7 @@ def insert_tag_benchmark(db: M3DB, category, reps, result, refresh=True):
 """PostgreSQL related benchmarks """
 
 
-def __psql_baseline_materialize_index_benchmark(psql: PostgresqlPC, category, reps, result, numdims, numtots, types,
+def __psql_baseline_materialize_index_benchmark(psql: PostgresqlPC, query_name, reps, result, numdims, numtots, types,
                                                 filts):
     logger.info("psql_baseline_materialize_index_benchmark : \n numdims=%i, numtots=%i, types=%s, filts=%s" % (
         numdims, numtots, types, filts))
@@ -305,18 +343,18 @@ def __psql_baseline_materialize_index_benchmark(psql: PostgresqlPC, category, re
     materialized_view_query = psql.gen_state_query(numdims, numtots, types, filts)
 
     # drop materialized view indexes
-    psql.drop_materialized_indexes()
+    #psql.drop_materialized_indexes()
 
-    benchmark_string_query(psql, reps, baseline_query, "Baseline", category, result)
-    benchmark_string_query(psql, reps, materialized_view_query, "Materialized Views", category, result)
+    benchmark_string_query(psql, reps, baseline_query,  query_name,"PostgreSQL Baseline", result)
+    #benchmark_string_query(psql, reps, materialized_view_query,  query_name,"Materialized Views", result)
     # create materialized view indexes
-    psql.create_materialized_indexes()
-    benchmark_string_query(psql, reps, materialized_view_query, "Indexed Views", category, result)
+    #psql.create_materialized_indexes()
+    benchmark_string_query(psql, reps, materialized_view_query,  query_name,"PostgreSQL Optimized", result)
     return result
 
 
 def lifelog_task_state_benchmark(db, category, reps, result, neo=False):
-    numdims, numtots, types, filts = __get_lifelog_state_params()
+    numdims, numtots, types, filts = __get_lsc_lifelog_state_params()
 
     if neo:
         return __state_benchmark_reps(db, "Lifelog Task state", filts, numdims, numtots, reps, result, types)
@@ -324,7 +362,7 @@ def lifelog_task_state_benchmark(db, category, reps, result, neo=False):
 
 
 def simple_state_benchmark(db, category, reps, result, neo=False):
-    numdims, numtots, types, filts = __get_simple_state_params()
+    numdims, numtots, types, filts = __get_lsc_simple_state_params()
 
     if neo:
         return __state_benchmark_reps(db, "Simple state", filts, numdims, numtots, reps, result, types)
@@ -341,91 +379,88 @@ def __comp_state_benchmark(db1, db2, category, reps, result, numdims, numtots, t
 
     return result
 
+def __state_benchmark_reps(db, title, filts, numdims, numtots, reps, result, types):
+    for _ in range(reps):
+        state_benchmark(db, result, numdims, numtots, types, filts,  db.get_name(), title)
+    return result
 
 def medium_state_benchmark(db, category, reps, result, neo=False):
-    numdims, numtots, types, filts = __get_medium_state_params()
+    numdims, numtots, types, filts = __get_lsc_medium_state_params()
 
     if neo:
-        return __state_benchmark_reps(db, "Medium state", filts, numdims, numtots, reps, result, types)
+        return __state_benchmark_reps(db, category, filts, numdims, numtots, reps, result, types)
     return __psql_baseline_materialize_index_benchmark(db, category, reps, result, numdims, numtots, types, filts)
 
 
 def complex_state_benchmark(db, category, reps, result, neo=False):
-    numdims, numtots, types, filts = __get_complex_state_params()
+    numdims, numtots, types, filts = __get_lsc_complex_state_params()
 
     if neo:
-        return __state_benchmark_reps(db, "Complex state", filts, numdims, numtots, reps, result, types)
+        return __state_benchmark_reps(db, category, filts, numdims, numtots, reps, result, types)
     return __psql_baseline_materialize_index_benchmark(db, category, reps, result, numdims, numtots, types, filts)
 
 
-def two_dimensions_state(db, category, reps, result, neo=False):
-    numdims, numtots, types, filts = __get_2d_state_params()
+def two_dimensions_state(db, category, reps, result, neo=False,vbs=False):
+    numdims, numtots, types, filts = __get_vbs_2d_state_params() if vbs else __get_lsc_2d_state_params()
 
     if neo:
-        return __state_benchmark_reps(db, "2D state", filts, numdims, numtots, reps, result, types)
+        return __state_benchmark_reps(db, category, filts, numdims, numtots, reps, result, types)
 
     return __psql_baseline_materialize_index_benchmark(db, category, reps, result, numdims, numtots, types, filts)
 
 
-def three_dimensions_state(db, category, reps, result, neo=False):
-    numdims, numtots, types, filts = __get_3d_state_params()
+def three_dimensions_state(db, category, reps, result, neo=False, vbs=False):
+    numdims, numtots, types, filts = __get_vbs_3d_state_params() if vbs else __get_lsc_3d_state_params()
 
     if neo:
-        return __state_benchmark_reps(db, "3D state", filts, numdims, numtots, reps, result, types)
+        return __state_benchmark_reps(db, category, filts, numdims, numtots, reps, result, types)
     return __psql_baseline_materialize_index_benchmark(db, category, reps, result, numdims, numtots, types, filts)
 
 
-def __state_benchmark_reps(db, title, filts, numdims, numtots, reps, result, types):
-    for _ in range(reps):
-        return state_benchmark(db, result, numdims, numtots, types, filts, db.get_name(), title)
-    return result
-
-
-def three_two_filters_dimensions_state(db, category, reps, result, neo=False):
-    numdims, numtots, types, filts = __get_3d_2f_state_params()
+def three_two_filters_dimensions_state(db, category, reps, result, neo=False, vbs=False):
+    numdims, numtots, types, filts = __get_vbs_3d_2f_state_params() if vbs else __get_lsc_3d_2f_state_params()
 
     if neo:
-        return __state_benchmark_reps(db, "3D + 2 state", filts, numdims, numtots, reps, result, types)
+        return __state_benchmark_reps(db, category, filts, numdims, numtots, reps, result, types)
     return __psql_baseline_materialize_index_benchmark(db, category, reps, result, numdims, numtots, types, filts)
-
 
 def simple_state_comp_benchmark(db1: M3DB, db2: M3DB, category, reps, result, incl_baseline=False):
-    numdims, numtots, types, filts = __get_simple_state_params()
+    numdims, numtots, types, filts = __get_lsc_simple_state_params()
 
     return __comp_state_benchmark(db1, db2, category, reps, result, numdims, numtots, types, filts, incl_baseline)
 
 
 def medium_state_comp_benchmark(db1: M3DB, db2: M3DB, category, reps, result, incl_baseline=False):
-    numdims, numtots, types, filts = __get_medium_state_params()
+    numdims, numtots, types, filts = __get_lsc_medium_state_params()
 
     return __comp_state_benchmark(db1, db2, category, reps, result, numdims, numtots, types, filts, incl_baseline)
 
 
 def complex_state_comp_benchmark(db1: M3DB, db2: M3DB, category, reps, result, incl_baseline=False):
-    numdims, numtots, types, filts = __get_complex_state_params()
+    numdims, numtots, types, filts = __get_lsc_complex_state_params()
 
     return __comp_state_benchmark(db1, db2, category, reps, result, numdims, numtots, types, filts, incl_baseline)
 
 
 def comp_2d_state_benchmark(db1: M3DB, db2: M3DB, category, reps, result, incl_baseline=False):
-    numdims, numtots, types, filts = __get_2d_state_params()
+    numdims, numtots, types, filts = __get_lsc_2d_state_params()
 
     return __comp_state_benchmark(db1, db2, category, reps, result, numdims, numtots, types, filts, incl_baseline)
 
 
 def comp_3d_state_benchmark(db1: M3DB, db2: M3DB, category, reps, result, incl_baseline=False):
-    numdims, numtots, types, filts = __get_3d_state_params()
+    numdims, numtots, types, filts = __get_lsc_3d_state_params()
 
     return __comp_state_benchmark(db1, db2, category, reps, result, numdims, numtots, types, filts, incl_baseline)
 
 
 def comp_3d_2f_state_benchmark(db1: M3DB, db2: M3DB, category, reps, result, incl_baseline=False):
-    numdims, numtots, types, filts = __get_3d_2f_state_params()
+    numdims, numtots, types, filts = __get_lsc_3d_2f_state_params()
 
     return __comp_state_benchmark(db1, db2, category, reps, result, numdims, numtots, types, filts, incl_baseline)
 
 
-def __get_lifelog_state_params():
+def __get_lsc_lifelog_state_params():
     """ 2D browsing state from Figure 1,
     with children of the Dog node on
     the one axis, and timezone on the
@@ -437,7 +472,7 @@ def __get_lifelog_state_params():
     return numdims, numtots, types, filts
 
 
-def __get_simple_state_params():
+def __get_lsc_simple_state_params():
     """ 2D browsing state with the top level of the
      entity hierarchy on one axis and location on
      the other axis """
@@ -448,7 +483,7 @@ def __get_simple_state_params():
     return numdims, numtots, types, filts
 
 
-def __get_medium_state_params():
+def __get_lsc_medium_state_params():
     """ 3D browsing state with the top level of the
     entity hierarchy on the first axis, the
     children of the Dog node on the second axis,
@@ -460,7 +495,7 @@ def __get_medium_state_params():
     return numdims, numtots, types, filts
 
 
-def __get_complex_state_params():
+def __get_lsc_complex_state_params():
     """ 3D browsing state with the top level of the
     entity hierarchy on the first axis, the
     children of the Dog node on the second axis,
@@ -472,7 +507,7 @@ def __get_complex_state_params():
     return numdims, numtots, types, filts
 
 
-def __get_2d_state_params():
+def __get_lsc_2d_state_params():
     """ dog , year
      46, 183288 """
     numdims = 2
@@ -482,7 +517,7 @@ def __get_2d_state_params():
     return numdims, numtots, types, filts
 
 
-def __get_3d_state_params():
+def __get_lsc_3d_state_params():
     """dog , location name, day of week string
     46, 127192, 183288 """
     numdims = 3
@@ -492,11 +527,40 @@ def __get_3d_state_params():
     return numdims, numtots, types, filts
 
 
-def __get_3d_2f_state_params():
+def __get_lsc_3d_2f_state_params():
     """ location, day of week string, year, dog, september
      127192, 183288, 183288, 46, """
     numdims = 3
     numtots = 5
     types = ["S", "H", "S", "H", "T"]
     filts = [15, 30, 11, 691, 13]
+    return numdims, numtots, types, filts
+
+def __get_vbs_2d_state_params():
+    """ seat , category
+     ,  """
+    numdims = 2
+    numtots = 2
+    types = ["H", "S"]
+    filts = [11659, 5]
+    return numdims, numtots, types, filts
+
+
+def __get_vbs_3d_state_params():
+    """dog , category, seat
+     """
+    numdims = 3
+    numtots = 3
+    types = ["H", "S", "H"]
+    filts = [13030, 5, 11659]
+    return numdims, numtots, types, filts
+
+
+def __get_vbs_3d_2f_state_params():
+    """ segment, seat, user tag, dog, video 
+     """
+    numdims = 3
+    numtots = 5
+    types = ["S", "H", "S", "H", "T"]
+    filts = [2, 11659, 4, 13030,1 ]
     return numdims, numtots, types, filts

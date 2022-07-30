@@ -66,8 +66,8 @@ def state_cell_benchmark(r):
 
     BenchmarkHarness.comp_bench_rand_id("Tag by id", psql.get_name(), neo.get_name(), psql.get_tag_by_id,
                                         neo.get_tag_by_id, r, MAX_TAG_ID, results)
-    BenchmarkHarness.comp_bench_rand_id("Tags in tagset", psql.get_name(), neo.get_name(), psql.get_tags_in_tagset,
-                                        neo.get_tags_in_tagset, r, MAX_TAGSET_ID, results)
+    #BenchmarkHarness.comp_bench_rand_id("Tags in tagset", psql.get_name(), neo.get_name(), psql.get_tags_in_tagset,
+    #                                    neo.get_tags_in_tagset, r, MAX_TAGSET_ID, results)
     BenchmarkHarness.comp_bench_rand_id("Node tag subtree", psql.get_name(), neo.get_name(), psql.get_node_tag_subtree,
                                         neo.get_node_tag_subtree, r, MAX_NODE_ID, results)
     BenchmarkHarness.comp_random_state_benchmark(psql, neo, r, results)
@@ -75,7 +75,7 @@ def state_cell_benchmark(r):
 
 
     title = "Latency of random Photocube read-only queries of Neo4j and Postgresql" + "\n" + "Query repetitions: %i " % r
-    create_latency_barchart(results)
+    create_cbmi_latency_barchart(results)
     plt.show()
     neo.close()
     psql.close()
@@ -93,6 +93,22 @@ def state_cell_benchmark(r):
     BenchmarkHarness.comp_random_cell_benchmark(psql, neo, r, results)
 
     title = "Latency of state & cell queries of Neo4j and Postgresql" + "\n" + "Query repetitions: %i " % r
+    create_cbmi_latency_barchart(results)
+    plt.show()
+    neo.close()
+    psql.close()
+
+@benchmark.command("state-types")
+@click.option("--r", default=10, help="Number of query repetitions")
+def state_cell_benchmark(r):
+    """Standard benchmarking of state & cell comparisons.
+    Runs state & cell postgreSQL & Neo4J read queries comparisons. Random ids used are the same for both databases to ensure fair comparison."""
+    logger.info("Running state types latency benchmark with " + str(r) + " repetitions")
+    results = {'query': [], 'latency': [], 'category': []}
+
+    BenchmarkHarness.comp_random_state_types_benchmark(psql, neo, r, results)
+
+    title = "Latency of state type queries of Neo4j and Postgresql" + "\n" + "Query repetitions: %i " % r
     create_cbmi_latency_barchart(results)
     plt.show()
     neo.close()
@@ -124,7 +140,7 @@ def state_cell_benchmark(r, w):
         BenchmarkHarness.insert_tag_benchmark(neo, neo.get_name(), r, results)
 
     title = "Latency of random Photocube queries of Neo4j and Postgresql" + "\n" + "Query repetitions: %i " % r
-    create_latency_barchart(results)
+    create_cbmi_latency_barchart(results)
     plt.show()
     neo.close()
     psql.close()
@@ -157,7 +173,7 @@ def state_scenarios_benchmark(r, neo4j, comp):
         BenchmarkHarness.three_two_filters_dimensions_state(psql, "3D + 2", r, results)
 
     title = 'Photocube state latency results \n Query repetitions:' + str(r) + ''
-    create_latency_barchart(results)
+    create_cbmi_latency_barchart(results)
     plt.show()
     neo.close()
     psql.close()
@@ -165,7 +181,7 @@ def state_scenarios_benchmark(r, neo4j, comp):
 
 @benchmark.command(name="cbmi")
 @click.option("--r", default=10, help="Number of query repetitions")
-def state_scenarios_benchmark(r):
+def state_cbmi_scenarios_benchmark(r):
     """PostgreSQL only benchmarking for different state scenarios."""
     logger.info("Running CBMI state scenarios benchmark with " + str(r) + " repetitions")
     results = {'query': [], 'latency': [], 'category': []}
@@ -173,6 +189,28 @@ def state_scenarios_benchmark(r):
     BenchmarkHarness.two_dimensions_state(psql, "2D", r, results)
     BenchmarkHarness.three_dimensions_state(psql, "3D", r, results)
     BenchmarkHarness.three_two_filters_dimensions_state(psql, "3D + 2", r, results)
+
+    create_cbmi_latency_barchart(results)
+
+    plt.show()
+    neo.close()
+    psql.close()
+
+@benchmark.command(name="state-scenario")
+@click.option("--r", default=10, help="Number of query repetitions")
+@click.option("--vbs", is_flag=True, help="Use VBS scenarious. Default is LSC")
+def state_scenarios_benchmark(r,vbs):
+    """Benchmarking for different state scenarios."""
+    logger.info("Running state scenarios benchmark with " + str(r) + " repetitions")
+    results = {'query': [], 'latency': [], 'category': []}
+
+    BenchmarkHarness.two_dimensions_state(psql, "2D", r, results,vbs=vbs)
+    BenchmarkHarness.three_dimensions_state(psql, "3D", r, results,vbs=vbs)
+    BenchmarkHarness.three_two_filters_dimensions_state(psql, "3D + 2", r, results,vbs=vbs)
+
+    BenchmarkHarness.two_dimensions_state(neo, "2D", r, results, neo=True, vbs=vbs)
+    BenchmarkHarness.three_dimensions_state(neo, "3D", r, results, neo=True, vbs=vbs)
+    BenchmarkHarness.three_two_filters_dimensions_state(neo, "3D + 2", r, results, neo=True, vbs=vbs)
 
     create_cbmi_latency_barchart(results)
 
@@ -190,15 +228,15 @@ def write_latency_benchmark(r):
 
 
     BenchmarkHarness.insert_object_benchmark(psql, psql.get_name() + " Baseline", r, results,refresh=False)
-    BenchmarkHarness.insert_object_benchmark(psql, psql.get_name(), r, results)
+    #BenchmarkHarness.insert_object_benchmark(psql, psql.get_name(), r, results)
     BenchmarkHarness.insert_object_benchmark(neo, neo.get_name(), r, results)
 
     BenchmarkHarness.insert_tag_benchmark(psql, psql.get_name() + " Baseline", r, results,refresh=False)
-    BenchmarkHarness.insert_tag_benchmark(psql, psql.get_name(), r, results)
+    #BenchmarkHarness.insert_tag_benchmark(psql, psql.get_name(), r, results)
     BenchmarkHarness.insert_tag_benchmark(neo, neo.get_name(), r, results)
 
     title = "Latency of Photocube inserts of Neo4j and Postgresql" + "\n" + "Query repetitions: %i " % r
-    create_latency_barchart(results)
+    create_cbmi_latency_barchart(results)
     plt.show()
     neo.close()
     psql.close()
