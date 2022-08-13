@@ -23,7 +23,7 @@ import BenchmarkHarness
 import Neo4JM3 as Neo4JM3
 import PostgresqlM3 as PostgresqlM3
 # Creating and Configuring Logger
-from GraphCreator import create_latency_barchart, create_latency_scatter_plot, create_cbmi_latency_barchart
+from GraphCreator import create_latency_barchart, create_latency_scatter_plot, create_paper_latency_barchart, process_and_export_results_to_csv, export_raw_results_to_csv
 from dotenv import dotenv_values
 
 env = dotenv_values(".env") 
@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 driver = GraphDatabase.driver(env["NEO4J_URL"], auth=(env["NEO4J_USER"], env["NEO4J_PASSWORD"]))
 neo = Neo4JM3.Neo4jPC(driver)
 
+logger.info("Connecting to PostgreSQL database: " + env["PSQL_DB"])
 PSQL_CONN = psycopg.connect(user=env["PSQL_USER"], password=env["PSQL_PASSWORD"], host=env["PSQL_HOST"], port=env["PSQL_PORT"], dbname=env["PSQL_DB"])
 PSQL_CONN.autocommit = False  # allow for rollback on insert & update queries
 psql = PostgresqlM3.PostgresqlPC(PSQL_CONN)
@@ -58,7 +59,8 @@ def benchmark():
 
 @benchmark.command("read")
 @click.option("--r", default=10, help="Number of query repetitions")
-def state_cell_benchmark(r):
+@click.option("--csv", help="Export results to csv file")
+def read_benchmark(r, csv : str):
     """Standard benchmarking of all read query comparisons.
     Runs all postgreSQL & Neo4J photocube read queries comparisons. Random ids used are the same for both databases to ensure fair comparison."""
     logger.info("Running standard latency benchmark with " + str(r) + " repetitions")
@@ -73,9 +75,12 @@ def state_cell_benchmark(r):
     BenchmarkHarness.comp_random_state_benchmark(psql, neo, r, results)
     BenchmarkHarness.comp_random_cell_benchmark(psql, neo, r, results)
 
+    if csv:
+        process_and_export_results_to_csv(results, csv)
+        
 
     title = "Latency of random Photocube read-only queries of Neo4j and Postgresql" + "\n" + "Query repetitions: %i " % r
-    create_cbmi_latency_barchart(results)
+    create_paper_latency_barchart(results)
     plt.show()
     neo.close()
     psql.close()
@@ -83,7 +88,8 @@ def state_cell_benchmark(r):
 
 @benchmark.command("state-cell")
 @click.option("--r", default=10, help="Number of query repetitions")
-def state_cell_benchmark(r):
+@click.option("--csv", help="Export results to csv file")
+def state_cell_benchmark(r,csv : str):
     """Standard benchmarking of state & cell comparisons.
     Runs state & cell postgreSQL & Neo4J read queries comparisons. Random ids used are the same for both databases to ensure fair comparison."""
     logger.info("Running state & cell latency benchmark with " + str(r) + " repetitions")
@@ -92,15 +98,19 @@ def state_cell_benchmark(r):
     BenchmarkHarness.comp_random_state_benchmark(psql, neo, r, results)
     BenchmarkHarness.comp_random_cell_benchmark(psql, neo, r, results)
 
+    if csv:
+        process_and_export_results_to_csv(results, csv)
+
     title = "Latency of state & cell queries of Neo4j and Postgresql" + "\n" + "Query repetitions: %i " % r
-    create_cbmi_latency_barchart(results)
+    create_paper_latency_barchart(results)
     plt.show()
     neo.close()
     psql.close()
 
 @benchmark.command("state-types")
 @click.option("--r", default=10, help="Number of query repetitions")
-def state_cell_benchmark(r):
+@click.option("--csv", help="Export results to csv file")
+def state_type_benchmark(r,csv : str):
     """Standard benchmarking of state & cell comparisons.
     Runs state & cell postgreSQL & Neo4J read queries comparisons. Random ids used are the same for both databases to ensure fair comparison."""
     logger.info("Running state types latency benchmark with " + str(r) + " repetitions")
@@ -108,8 +118,11 @@ def state_cell_benchmark(r):
 
     BenchmarkHarness.comp_random_state_types_benchmark(psql, neo, r, results)
 
+    if csv:
+        process_and_export_results_to_csv(results, csv)
+
     title = "Latency of state type queries of Neo4j and Postgresql" + "\n" + "Query repetitions: %i " % r
-    create_cbmi_latency_barchart(results)
+    create_paper_latency_barchart(results)
     plt.show()
     neo.close()
     psql.close()
@@ -117,7 +130,8 @@ def state_cell_benchmark(r):
 @benchmark.command("complete")
 @click.option("--r", default=10, help="Number of query repetitions")
 @click.option("--w", is_flag=True, help="Benchmark insert & update queries? (default: False)")
-def state_cell_benchmark(r, w):
+@click.option("--csv", help="Export results to csv file")
+def complete_benchmark(r, w, csv : str):
     """Standard benchmarking for all comparisons.
     Runs all postgreSQL & Neo4J photocube queries comparisons. Random ids used are the same for both databases to ensure fair comparison."""
     logger.info("Running standard latency benchmark with " + str(r) + " repetitions")
@@ -139,8 +153,11 @@ def state_cell_benchmark(r, w):
         BenchmarkHarness.insert_tag_benchmark(psql, psql.get_name(), r, results)
         BenchmarkHarness.insert_tag_benchmark(neo, neo.get_name(), r, results)
 
+    if csv:
+        process_and_export_results_to_csv(results, csv)
+
     title = "Latency of random Photocube queries of Neo4j and Postgresql" + "\n" + "Query repetitions: %i " % r
-    create_cbmi_latency_barchart(results)
+    create_paper_latency_barchart(results)
     plt.show()
     neo.close()
     psql.close()
@@ -150,7 +167,8 @@ def state_cell_benchmark(r, w):
 @click.option("--r", default=10, help="Number of query repetitions")
 @click.option("--neo4j", is_flag=True, help="Use only neo4j as database. Default is PostgreSQL only")
 @click.option("--comp", is_flag=True, help="Compare both databases. Default is only one database")
-def state_scenarios_benchmark(r, neo4j, comp):
+@click.option("--csv", help="Export results to csv file")
+def state_scenarios_benchmark(r, neo4j, comp, csv : str):
     """Benchmarking for different state scenarios."""
     logger.info("Running state scenarios benchmark with " + str(r) + " repetitions")
     results = {'query': [], 'latency': [], 'category': []}
@@ -172,8 +190,11 @@ def state_scenarios_benchmark(r, neo4j, comp):
         BenchmarkHarness.three_dimensions_state(psql, "3D", r, results)
         BenchmarkHarness.three_two_filters_dimensions_state(psql, "3D + 2", r, results)
 
+    if csv:
+        process_and_export_results_to_csv(results, csv)
+
     title = 'Photocube state latency results \n Query repetitions:' + str(r) + ''
-    create_cbmi_latency_barchart(results)
+    create_paper_latency_barchart(results)
     plt.show()
     neo.close()
     psql.close()
@@ -181,7 +202,8 @@ def state_scenarios_benchmark(r, neo4j, comp):
 
 @benchmark.command(name="cbmi")
 @click.option("--r", default=10, help="Number of query repetitions")
-def state_cbmi_scenarios_benchmark(r):
+@click.option("--csv", help="Export results to csv file")
+def state_cbmi_scenarios_benchmark(r, csv : str):
     """PostgreSQL only benchmarking for different state scenarios."""
     logger.info("Running CBMI state scenarios benchmark with " + str(r) + " repetitions")
     results = {'query': [], 'latency': [], 'category': []}
@@ -190,7 +212,10 @@ def state_cbmi_scenarios_benchmark(r):
     BenchmarkHarness.three_dimensions_state(psql, "3D", r, results)
     BenchmarkHarness.three_two_filters_dimensions_state(psql, "3D + 2", r, results)
 
-    create_cbmi_latency_barchart(results)
+    if csv:
+        process_and_export_results_to_csv(results, csv)
+
+    create_paper_latency_barchart(results)
 
     plt.show()
     neo.close()
@@ -199,7 +224,8 @@ def state_cbmi_scenarios_benchmark(r):
 @benchmark.command(name="state-scenario")
 @click.option("--r", default=10, help="Number of query repetitions")
 @click.option("--vbs", is_flag=True, help="Use VBS scenarious. Default is LSC")
-def state_scenarios_benchmark(r,vbs):
+@click.option("--csv", help="Export results to csv file")
+def state_scenarios_benchmark(r,vbs, csv : str):
     """Benchmarking for different state scenarios."""
     logger.info("Running state scenarios benchmark with " + str(r) + " repetitions")
     results = {'query': [], 'latency': [], 'category': []}
@@ -212,7 +238,10 @@ def state_scenarios_benchmark(r,vbs):
     BenchmarkHarness.three_dimensions_state(neo, "3D", r, results, neo=True, vbs=vbs)
     BenchmarkHarness.three_two_filters_dimensions_state(neo, "3D + 2", r, results, neo=True, vbs=vbs)
 
-    create_cbmi_latency_barchart(results)
+    if csv:
+        process_and_export_results_to_csv(results, csv)
+
+    create_paper_latency_barchart(results)
 
     plt.show()
     neo.close()
@@ -221,22 +250,26 @@ def state_scenarios_benchmark(r,vbs):
 
 @benchmark.command("write")
 @click.option("--r", default=10, help="Number of query repetitions")
-def write_latency_benchmark(r):
+@click.option("--csv", help="Export results to csv file")
+def write_latency_benchmark(r, csv : str):
     """Benchmarking for write photocube scenarios."""
     logger.info("Running write latency benchmark with " + str(r) + " repetitions")
     results = {'query': [], 'latency': [], 'category': []}
 
 
     BenchmarkHarness.insert_object_benchmark(psql, psql.get_name() + " Baseline", r, results,refresh=False)
-    #BenchmarkHarness.insert_object_benchmark(psql, psql.get_name(), r, results)
+    BenchmarkHarness.insert_object_benchmark(psql, psql.get_name(), r, results)
     BenchmarkHarness.insert_object_benchmark(neo, neo.get_name(), r, results)
 
     BenchmarkHarness.insert_tag_benchmark(psql, psql.get_name() + " Baseline", r, results,refresh=False)
-    #BenchmarkHarness.insert_tag_benchmark(psql, psql.get_name(), r, results)
+    BenchmarkHarness.insert_tag_benchmark(psql, psql.get_name(), r, results)
     BenchmarkHarness.insert_tag_benchmark(neo, neo.get_name(), r, results)
 
+    if csv:
+        process_and_export_results_to_csv(results, csv)
+
     title = "Latency of Photocube inserts of Neo4j and Postgresql" + "\n" + "Query repetitions: %i " % r
-    create_cbmi_latency_barchart(results)
+    create_paper_latency_barchart(results)
     plt.show()
     neo.close()
     psql.close()

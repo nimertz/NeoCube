@@ -2,12 +2,49 @@ import itertools
 import logging
 
 import numpy as np
+import pandas as pd
 import seaborn as sbn
 
 logger = logging.getLogger(__name__)
 
 logger.setLevel(logging.INFO)
 
+
+def export_raw_results_to_csv(results, filename):
+    # convert results to dataframe
+    df = pd.DataFrame(results)
+
+    # export results dataframe to csv
+    df.to_csv(filename + ".csv", index=False)
+
+def ci(a, which=95, axis=None):
+    """Return a percentile range from an array of values."""
+    p = 50 - which / 2, 50 + which / 2
+    return np.nanpercentile(a, p, axis)
+
+
+def process_and_export_results_to_csv(results, filename):
+    # convert {'query': [], 'latency': [], 'category': []} map to {'Query': [], 'Postgres': [], 'Min': [], 'Max': [], 'Neo4j': [], 'Min': [], 'Max': []}
+    # convert results to dataframe
+    df = pd.DataFrame(results)
+    old = df
+    
+    # mean latency per query and category
+    df = df.groupby(['query', 'category']).mean().reset_index()
+
+    # add min and max latency per query and category
+    df['min'] = old.groupby(['query', 'category']).min().reset_index()['latency']
+    df['max'] = old.groupby(['query', 'category']).max().reset_index()['latency']
+
+    # calculate seaborn 95 % confidence interval for latency per query and category
+    df['lower_ci'] = old.groupby(['query', 'category']).apply(lambda x: ci(x['latency'])[0]).reset_index()[0]
+    df['upper_ci'] = old.groupby(['query', 'category']).apply(lambda x: ci(x['latency'])[1]).reset_index()[0]
+
+    print(df)
+
+    # export results dataframe to dat
+    df.to_csv(filename, index=False)
+    
 
 def create_latency_scatter_plot(results, x_axis, x_label, title = ""):
     # seaborn scatter plot of results
@@ -48,7 +85,7 @@ def create_latency_barchart(results, title = ""):
     return ax
 
 
-def create_cbmi_latency_barchart(results,pattern=False):
+def create_paper_latency_barchart(results,pattern=False):
     # seaborn bar plot of results
     sbn.set(style="darkgrid")
     sbn.set_context("poster")
@@ -57,7 +94,7 @@ def create_cbmi_latency_barchart(results,pattern=False):
     ax.set(ylabel='Mean Latency (ms)')
 
     ylabels = ['{:.0f}'.format(y) for y in ax.get_yticks()]
-    print(ylabels)
+    #print(ylabels)
     ax.set_yticklabels(ylabels)
 
     if(pattern):
@@ -65,7 +102,7 @@ def create_cbmi_latency_barchart(results,pattern=False):
     __show_barchart_values(ax)
 
     sbn.despine()
-    logger.info("Latency barchart created for CBMI")
+    logger.info("Latency barchart created for paper format")
     return ax
 
 
